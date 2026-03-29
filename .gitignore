@@ -1,0 +1,9 @@
+# 这是注释
+# secret.txt          # 忽略根目录下的 secret.txt 文件
+# config/local.yml    # 忽略 config 文件夹下的 local.yml
+# *.log               # 忽略所有 .log 后缀的文件
+# temp/               # 忽略整个 temp 文件夹（包括里面的所有内容）
+# build/              # 忽略 build 文件夹
+# !build/keep.txt     # 例外：不忽略 build/keep.txt（感叹号表示取反）
+TemplateProject.uvguix.lym
+TemplateProject.uvguix.TD
