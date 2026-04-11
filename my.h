@@ -80,23 +80,32 @@ void img_drag_event_cb(lv_event_t *e)
 
 void img2_move_rotate_timer_cb(lv_timer_t * timer)
 {
-	if(angle_counter < 2700){
+    static int16_t dx = 10;
+    static int16_t dy = 1;
+    lv_obj_t * scr = lv_scr_act();
+    lv_coord_t scr_w = lv_obj_get_width(scr);
+    lv_coord_t scr_h = lv_obj_get_height(scr);
     lv_obj_t * img2 = (lv_obj_t *)timer->user_data;
-
     lv_coord_t x = lv_obj_get_x(img2);
-    lv_coord_t y = lv_obj_get_y(img2);
-
-    x += 10;
-    y += 1;
-		lv_obj_set_pos(img2, x, y);
-	
+		lv_coord_t y = lv_obj_get_y(img2);
+		lv_coord_t img_w = lv_obj_get_width(img2);
+		lv_coord_t img_h = lv_obj_get_height(img2);
+    if (x <= 0 || x + img_w >= scr_w) {
+        dx = -dx;
+        x += dx;
+    }
+		else x += dx;
+    if (y <= 0 || y + img_h >= scr_h) {
+        dy = -dy;
+        y += dy;
+		}
+		else y += dy;
+	lv_obj_set_pos(img2, x, y);
 		angle_counter += 20;
 		lv_img_set_pivot(img2, 180, 180);
 		lv_img_set_angle(img2, angle_counter);
-	}
-	else
-		return;
 }
+
 
 static void ta_event_cb(lv_event_t *e)
 {

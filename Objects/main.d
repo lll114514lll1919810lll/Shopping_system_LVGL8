@@ -195,3 +195,6 @@
 .\objects\main.o: my.h
 .\objects\main.o: .\lvgl\examples\porting\lv_port_disp_template.h
 .\objects\main.o: .\lvgl\examples\porting\lv_port_indev_template.h
+.\objects\main.o: back.h
+.\objects\main.o: .\lvgl\examples\porting\lv_port_disp_template.h
+.\objects\main.o: .\lvgl\examples\porting\lv_port_indev_template.h
