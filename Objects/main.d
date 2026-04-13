@@ -192,9 +192,5 @@
 .\objects\main.o: .\Drivers\sdram_malloc.h
 .\objects\main.o: .\lvgl\examples\porting\lv_port_disp_template.h
 .\objects\main.o: .\lvgl\examples\porting\lv_port_indev_template.h
-.\objects\main.o: my.h
-.\objects\main.o: .\lvgl\examples\porting\lv_port_disp_template.h
-.\objects\main.o: .\lvgl\examples\porting\lv_port_indev_template.h
-.\objects\main.o: back.h
-.\objects\main.o: .\lvgl\examples\porting\lv_port_disp_template.h
-.\objects\main.o: .\lvgl\examples\porting\lv_port_indev_template.h
+.\objects\main.o: shop_app.h
+.\objects\main.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h

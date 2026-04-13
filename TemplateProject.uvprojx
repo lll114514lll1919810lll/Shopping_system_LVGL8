@@ -419,9 +419,19 @@
               <FilePath>.\read_file_to_array.c</FilePath>
             </File>
             <File>
-              <FileName>Hang2Hang.c</FileName>
+              <FileName>shop_callbacks.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\Hang2Hang.c</FilePath>
+              <FilePath>.\shop_callbacks.c</FilePath>
+            </File>
+            <File>
+              <FileName>shop_app.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\shop_app.h</FilePath>
+            </File>
+            <File>
+              <FileName>shop_ui.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\shop_ui.c</FilePath>
             </File>
           </Files>
         </Group>
