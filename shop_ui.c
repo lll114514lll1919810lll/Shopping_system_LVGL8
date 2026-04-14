@@ -82,6 +82,14 @@ void shop_ui_init(void)
     cart_list = lv_list_create(scr);
     lv_obj_set_size(cart_list, 240, 450);
     lv_obj_set_pos(cart_list, 540, 10);
+		lv_obj_set_style_pad_gap(cart_list, 12, 0);
+		lv_obj_set_style_pad_all(cart_list, 10, 0);
+		
+			// 标题
+		lv_obj_t * cart_title = lv_label_create(cart_list);
+		lv_label_set_text(cart_title, "Checklist");
+		lv_obj_set_style_text_align(cart_title, LV_TEXT_ALIGN_CENTER, 0);
+		lv_obj_set_width(cart_title, lv_pct(100));
 
     // 4. 输入框与键盘
     input_ta = lv_textarea_create(scr);
@@ -120,4 +128,31 @@ void shop_ui_init(void)
     lv_obj_t * lbl_clear = lv_label_create(btn_clear);
     lv_label_set_text(lbl_clear, "Clear");
     lv_obj_center(lbl_clear);
+
+		//6.优惠
+		lv_obj_t * discount_panel = lv_obj_create(scr);
+		lv_obj_set_size(discount_panel, 200, 450);
+		lv_obj_set_pos(discount_panel, 790, 10);
+		lv_obj_set_flex_flow(discount_panel, LV_FLEX_FLOW_COLUMN);
+		lv_obj_set_style_pad_gap(discount_panel, 12, 0);
+		lv_obj_set_style_pad_all(discount_panel, 10, 0);
+
+			// 标题
+		lv_obj_t * discount_title = lv_label_create(discount_panel);
+		lv_label_set_text(discount_title, "Discounts");
+		lv_obj_set_style_text_align(discount_title, LV_TEXT_ALIGN_CENTER, 0);
+		lv_obj_set_width(discount_title, lv_pct(100));
+
+		// 复选框选项（互斥组）
+		static const char * discount_opts[] = {"No discounts", "When 20 minus 5", "90% price", NULL};
+		for (int i = 0; discount_opts[i] != NULL; i++) {
+				lv_obj_t * cb = lv_checkbox_create(discount_panel);
+				lv_checkbox_set_text(cb, discount_opts[i]);
+				// 绑定回调，并传递选项索引
+				lv_obj_add_event_cb(cb, discount_cb_event_cb, LV_EVENT_VALUE_CHANGED, (void *)(uintptr_t)i);
+				// 默认选中“无优惠”
+				if (i == 0) {
+						lv_obj_add_state(cb, LV_STATE_CHECKED);
+				}
+		}
 }

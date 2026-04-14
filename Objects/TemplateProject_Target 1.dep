@@ -192,7 +192,7 @@ I (.\lvgl\src/extra/libs/ffmpeg/lv_ffmpeg.h)(0x61F7D6C6)
 I (.\Drivers\sdram_malloc.h)(0x69943778)
 I (.\lvgl\examples\porting\lv_port_disp_template.h)(0x6975D2D6)
 I (.\lvgl\examples\porting\lv_port_indev_template.h)(0x6975F8AE)
-I (shop_app.h)(0x69DD0359)
+I (shop_app.h)(0x69DD10DE)
 I (D:\Keil_v5\ARM\ARMCC\include\stdlib.h)(0x5D9B348A)
 F (.\GD32H7xx\startup_gd32h7xx.s)(0x6975DEB4)(--cpu Cortex-M7.fp.dp -g --apcs=interwork -IC:\Users\29363\AppData\Local\Arm\Packs\GigaDevice\GD32H7xx_DFP\1.4.0\Device\Include--pd "__UVISION_VERSION SETA 535" --pd "USE_STDPERIPH_DRIVER SETA 1" --pd "GD32H7XX SETA 1" --pd "GD32H7XXI SETA 1"--list .\listings\startup_gd32h7xx.lst --xref -o .\objects\startup_gd32h7xx.o --depend .\objects\startup_gd32h7xx.d)
 F (.\GD32H7xx\system_gd32h7xx.c)(0x696176AA)(--c99 -c --cpu Cortex-M7.fp.dp -g -O1 --apcs=interwork --split_sections -I .\GD32H7xx_standard_peripheral\Include -I .\GD32H7xx -I .\GD32H7xx\CMSIS -I . -I .\Drivers -I .\FATFS -I .\lvgl -I .\lvgl\src -I .\lvgl\examples\porting -I .\lvgl\demos\benchmark -I .\lvgl\demos\stress --diag_suppress=68,111,188,223,546,1295-IC:\Users\29363\AppData\Local\Arm\Packs\GigaDevice\GD32H7xx_DFP\1.4.0\Device\Include-D__UVISION_VERSION="535" -DUSE_STDPERIPH_DRIVER -DGD32H7XX -DGD32H7XXI -DHXTAL_VALUE="8000000"-o .\objects\system_gd32h7xx.o --omf_browse .\objects\system_gd32h7xx.crf --depend .\objects\system_gd32h7xx.d)
@@ -884,8 +884,8 @@ I (.\lvgl\src/extra/libs/freetype/lv_freetype.h)(0x61F7D6C6)
 I (.\lvgl\src/extra/libs/rlottie/lv_rlottie.h)(0x61F7D6C6)
 I (.\lvgl\src/extra/libs/ffmpeg/lv_ffmpeg.h)(0x61F7D6C6)
 I (.\Drivers\sdram_malloc.h)(0x69943778)
-F (.\shop_callbacks.c)(0x69DD0359)(--c99 -c --cpu Cortex-M7.fp.dp -g -O1 --apcs=interwork --split_sections -I .\GD32H7xx_standard_peripheral\Include -I .\GD32H7xx -I .\GD32H7xx\CMSIS -I . -I .\Drivers -I .\FATFS -I .\lvgl -I .\lvgl\src -I .\lvgl\examples\porting -I .\lvgl\demos\benchmark -I .\lvgl\demos\stress --diag_suppress=68,111,188,223,546,1295-IC:\Users\29363\AppData\Local\Arm\Packs\GigaDevice\GD32H7xx_DFP\1.4.0\Device\Include-D__UVISION_VERSION="535" -DUSE_STDPERIPH_DRIVER -DGD32H7XX -DGD32H7XXI -DHXTAL_VALUE="8000000"-o .\objects\shop_callbacks.o --omf_browse .\objects\shop_callbacks.crf --depend .\objects\shop_callbacks.d)
-I (shop_app.h)(0x69DD0359)
+F (.\shop_callbacks.c)(0x69DD1668)(--c99 -c --cpu Cortex-M7.fp.dp -g -O1 --apcs=interwork --split_sections -I .\GD32H7xx_standard_peripheral\Include -I .\GD32H7xx -I .\GD32H7xx\CMSIS -I . -I .\Drivers -I .\FATFS -I .\lvgl -I .\lvgl\src -I .\lvgl\examples\porting -I .\lvgl\demos\benchmark -I .\lvgl\demos\stress --diag_suppress=68,111,188,223,546,1295-IC:\Users\29363\AppData\Local\Arm\Packs\GigaDevice\GD32H7xx_DFP\1.4.0\Device\Include-D__UVISION_VERSION="535" -DUSE_STDPERIPH_DRIVER -DGD32H7XX -DGD32H7XXI -DHXTAL_VALUE="8000000"-o .\objects\shop_callbacks.o --omf_browse .\objects\shop_callbacks.crf --depend .\objects\shop_callbacks.d)
+I (shop_app.h)(0x69DD10DE)
 I (.\lvgl\lvgl.h)(0x61F7D6C6)
 I (.\lvgl\src/misc/lv_log.h)(0x61F7D6C6)
 I (.\lvgl\src/misc/../lv_conf_internal.h)(0x61F7D6C6)
@@ -1010,9 +1010,9 @@ I (.\lvgl\src/extra/libs/rlottie/lv_rlottie.h)(0x61F7D6C6)
 I (.\lvgl\src/extra/libs/ffmpeg/lv_ffmpeg.h)(0x61F7D6C6)
 I (D:\Keil_v5\ARM\ARMCC\include\stdio.h)(0x5D9B348A)
 I (D:\Keil_v5\ARM\ARMCC\include\stdlib.h)(0x5D9B348A)
-F (.\shop_app.h)(0x69DD0359)()
-F (.\shop_ui.c)(0x69DCFDA1)(--c99 -c --cpu Cortex-M7.fp.dp -g -O1 --apcs=interwork --split_sections -I .\GD32H7xx_standard_peripheral\Include -I .\GD32H7xx -I .\GD32H7xx\CMSIS -I . -I .\Drivers -I .\FATFS -I .\lvgl -I .\lvgl\src -I .\lvgl\examples\porting -I .\lvgl\demos\benchmark -I .\lvgl\demos\stress --diag_suppress=68,111,188,223,546,1295-IC:\Users\29363\AppData\Local\Arm\Packs\GigaDevice\GD32H7xx_DFP\1.4.0\Device\Include-D__UVISION_VERSION="535" -DUSE_STDPERIPH_DRIVER -DGD32H7XX -DGD32H7XXI -DHXTAL_VALUE="8000000"-o .\objects\shop_ui.o --omf_browse .\objects\shop_ui.crf --depend .\objects\shop_ui.d)
-I (shop_app.h)(0x69DD0359)
+F (.\shop_app.h)(0x69DD10DE)()
+F (.\shop_ui.c)(0x69DD11FC)(--c99 -c --cpu Cortex-M7.fp.dp -g -O1 --apcs=interwork --split_sections -I .\GD32H7xx_standard_peripheral\Include -I .\GD32H7xx -I .\GD32H7xx\CMSIS -I . -I .\Drivers -I .\FATFS -I .\lvgl -I .\lvgl\src -I .\lvgl\examples\porting -I .\lvgl\demos\benchmark -I .\lvgl\demos\stress --diag_suppress=68,111,188,223,546,1295-IC:\Users\29363\AppData\Local\Arm\Packs\GigaDevice\GD32H7xx_DFP\1.4.0\Device\Include-D__UVISION_VERSION="535" -DUSE_STDPERIPH_DRIVER -DGD32H7XX -DGD32H7XXI -DHXTAL_VALUE="8000000"-o .\objects\shop_ui.o --omf_browse .\objects\shop_ui.crf --depend .\objects\shop_ui.d)
+I (shop_app.h)(0x69DD10DE)
 I (.\lvgl\lvgl.h)(0x61F7D6C6)
 I (.\lvgl\src/misc/lv_log.h)(0x61F7D6C6)
 I (.\lvgl\src/misc/../lv_conf_internal.h)(0x61F7D6C6)

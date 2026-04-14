@@ -28,6 +28,8 @@ void kb_event_cb(lv_event_t * e);
 void checkout_btn_event_cb(lv_event_t * e);
 void clear_btn_event_cb(lv_event_t * e);
 void label_event_cb(lv_event_t *e);
+void discount_cb_event_cb(lv_event_t * e);
+void create_discount_panel(lv_obj_t * parent);
 
 // 4. 底层接口（由 main 或相关底层文件提供）
 extern void * sdram_malloc(uint32_t size);

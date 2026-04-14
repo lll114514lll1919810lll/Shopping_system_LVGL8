@@ -1,5 +1,21 @@
 #include "shop_app.h"
 
+// 优惠类型枚举
+typedef enum {
+    DISCOUNT_NONE = 0,
+    DISCOUNT_FULL_REDUCTION,
+    DISCOUNT_PERCENT_OFF
+} discount_type_t;
+
+// 获取当前选中的优惠（供结算使用）
+discount_type_t get_current_discount(void);
+
+static discount_type_t current_discount = DISCOUNT_NONE;
+
+discount_type_t get_current_discount(void) {
+    return current_discount;
+}
+
 // 记录当前点击的是哪个商品，用于键盘确认时计算
 static product_t * current_product = NULL;
 
@@ -46,7 +62,7 @@ void kb_event_cb(lv_event_t * e)
         const char * input_str = lv_textarea_get_text(input_ta);
         if(input_str && strlen(input_str) > 0) {
             float new_weight = (float)atof(input_str);
-            if(new_weight <= 0) return; // 忽略无效输入
+            if(new_weight < 0) return; // 忽略无效输入
 
             float total_price = new_weight * (float)current_product->price;
             
@@ -125,20 +141,45 @@ void checkout_btn_event_cb(lv_event_t * e)
             }
         }
     }
+		//对grand_total进行打折
+		float final_total = grand_total;
+    const char * discount_desc = "";
 
-    // 3. 准备结果字符串 (放在 static 缓冲区防止局部变量销毁)
-    static char result_buf[64];
-    // 使用 %.2f 格式化总价
-    snprintf(result_buf, sizeof(result_buf), "Total Amount: %.2f RMB", grand_total);
+    switch (current_discount) {
+        case DISCOUNT_FULL_REDUCTION:   // 满20减5
+            if (grand_total >= 20.0f) {
+                final_total = grand_total - 5.0f;
+                discount_desc = " (When 20 minus 5)";
+            }
+            break;
+        case DISCOUNT_PERCENT_OFF:      // 9折
+            final_total = grand_total * 0.9f;
+            discount_desc = " (90% price)";
+            break;
+        case DISCOUNT_NONE:
+        default:
+            break;
+    }
 
-    // 4. 创建弹窗时直接传入结果字符串
+    // 防止折扣后金额为负数
+    if (final_total < 0) final_total = 0;
+
+		// 4. 准备结果字符串 (扩大缓冲区，容纳折扣信息)
+    static char result_buf[128];
+    if (grand_total != final_total) {
+        snprintf(result_buf, sizeof(result_buf),
+                 "Before discount: %.2f RMB\nNow: %.2f RMB%s",
+                 grand_total, final_total, discount_desc);
+    } else {
+        snprintf(result_buf, sizeof(result_buf),
+                 "Total: %.2f RMB", final_total);
+    }
+
+    // 5. 创建弹窗
     static const char * mbtns[] = {"Close", ""};
-    // 注意：这里的 result_buf 代替了之前的 ""
-    lv_obj_t * mbox = lv_msgbox_create(NULL, "Checkout Success", result_buf, mbtns, true);
-    
+    lv_obj_t * mbox = lv_msgbox_create(NULL, "Succcess!", result_buf, mbtns, true);
     if(mbox) {
         lv_obj_center(mbox);
-        // 如果需要给文字上色，在创建后再单独获取 label 处理
         lv_obj_t * mbox_txt = lv_msgbox_get_text(mbox);
         if(mbox_txt) {
             lv_obj_set_style_text_color(mbox_txt, lv_palette_main(LV_PALETTE_RED), 0);
@@ -165,3 +206,26 @@ void label_event_cb(lv_event_t *e)
     }
 }
 
+/* ========== 优惠复选框互斥回调 ========== */
+void discount_cb_event_cb(lv_event_t * e) {
+    lv_obj_t * cb = lv_event_get_target(e);
+    uint32_t idx = (uint32_t)lv_event_get_user_data(e);
+    lv_obj_t * parent = lv_obj_get_parent(cb);
+
+    if (lv_obj_has_state(cb, LV_STATE_CHECKED)) {
+        // 清除同一容器内其他复选框的选中状态
+        uint32_t child_cnt = lv_obj_get_child_cnt(parent);
+        for (uint32_t i = 0; i < child_cnt; i++) {
+            lv_obj_t * child = lv_obj_get_child(parent, i);
+            if (child != cb && lv_obj_check_type(child, &lv_checkbox_class)) {
+                lv_obj_clear_state(child, LV_STATE_CHECKED);
+            }
+        }
+        // 更新全局选中状态
+        current_discount = (discount_type_t)idx;
+    }
+    else {
+        // 不允许取消选中，强制重新勾选
+        lv_obj_add_state(cb, LV_STATE_CHECKED);
+    }
+}
