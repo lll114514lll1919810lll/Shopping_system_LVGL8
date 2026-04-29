@@ -7,3 +7,5 @@
 # !build/keep.txt     # 例外：不忽略 build/keep.txt（感叹号表示取反）
 TemplateProject.uvguix.lym
 TemplateProject.uvguix.TD
+/TemplateProject.uvguix.86538
+/Hang2Hang.c
