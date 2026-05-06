@@ -1227,8 +1227,8 @@ ARM Macro Assembler    Page 19
               00000000 
 Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M7.fp.dp --apcs=
 interwork --depend=.\objects\startup_gd32h7xx.d -o.\objects\startup_gd32h7xx.o 
--IC:\Users\29363\AppData\Local\Arm\Packs\GigaDevice\GD32H7xx_DFP\1.4.0\Device\I
-nclude --predefine="__UVISION_VERSION SETA 535" --predefine="USE_STDPERIPH_DRIV
+-IC:\Users\Lecoo\AppData\Local\Arm\Packs\GigaDevice\GD32H7xx_DFP\1.4.0\Device\I
+nclude --predefine="__UVISION_VERSION SETA 538" --predefine="USE_STDPERIPH_DRIV
 ER SETA 1" --predefine="GD32H7XX SETA 1" --predefine="GD32H7XXI SETA 1" --list=
 .\listings\startup_gd32h7xx.lst GD32H7xx\startup_gd32h7xx.s
 

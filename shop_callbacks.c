@@ -61,6 +61,23 @@ void kb_event_cb(lv_event_t * e)
 
         const char * input_str = lv_textarea_get_text(input_ta);
         if(input_str && strlen(input_str) > 0) {
+            // 检查是否为按个卖的商品
+            if(strcmp(current_product->unit, "box") == 0 ||
+               strcmp(current_product->unit, "pack") == 0 ||
+               strcmp(current_product->unit, "bottle") == 0) {
+                // 检查输入是否为整数（不能有小数点）
+                if(strchr(input_str, '.') != NULL) {
+                    static const char * btns[] = {"OK", ""};
+                    lv_obj_t * mbox = lv_msgbox_create(NULL, "Error", "This item must be an integer quantity!", btns, true);
+                    lv_obj_center(mbox);
+                    // 隐藏输入界面
+                    lv_obj_add_flag(input_ta, LV_OBJ_FLAG_HIDDEN);
+                    lv_obj_add_flag(num_kb, LV_OBJ_FLAG_HIDDEN);
+                    lv_textarea_set_text(input_ta, "");
+                    lv_obj_move_background(label_full);
+                    return;
+                }
+            }
             float new_weight = (float)atof(input_str);
             if(new_weight < 0) return; // 忽略无效输入
 
@@ -103,12 +120,12 @@ void kb_event_cb(lv_event_t * e)
         lv_obj_add_flag(input_ta, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(num_kb, LV_OBJ_FLAG_HIDDEN);
         lv_textarea_set_text(input_ta, "");
-				lv_obj_move_background(label_full);
+		lv_obj_move_background(label_full);
     }
     else if(code == LV_EVENT_CANCEL) {
         lv_obj_add_flag(input_ta, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(num_kb, LV_OBJ_FLAG_HIDDEN);
-				lv_obj_move_background(label_full);
+		lv_obj_move_background(label_full);
     }
 }
 
