@@ -111,8 +111,9 @@ void kb_event_cb(lv_event_t * e)
                     lv_label_set_text(label, buf);
                 }
             } else {
-                // 如果没找到：新增一行按钮
-                lv_list_add_btn(cart_list, LV_SYMBOL_OK, buf);
+                // 如果没找到：新增一行按钮，并注册点击删除事件
+                lv_obj_t* btn = lv_list_add_btn(cart_list, LV_SYMBOL_OK, buf);
+                lv_obj_add_event_cb(btn, cart_list_btn_event_cb, LV_EVENT_CLICKED, NULL);
             }
         }
 
@@ -208,7 +209,12 @@ void checkout_btn_event_cb(lv_event_t * e)
 void clear_btn_event_cb(lv_event_t * e)
 {
     if(lv_event_get_code(e) == LV_EVENT_CLICKED && cart_list != NULL) {
-        lv_obj_clean(cart_list);
+        // 只删除商品项，不删除标题
+        uint32_t child_cnt = lv_obj_get_child_cnt(cart_list);
+        for(int i = child_cnt - 1; i > 0; i--) {
+            lv_obj_t * child = lv_obj_get_child(cart_list, i);
+            lv_obj_del(child);
+        }
     }
 }
 
@@ -244,5 +250,34 @@ void discount_cb_event_cb(lv_event_t * e) {
     else {
         // 不允许取消选中，强制重新勾选
         lv_obj_add_state(cb, LV_STATE_CHECKED);
+    }
+}
+
+// 购物车按钮项点击回调：点击商品项则删除该项
+void cart_list_btn_event_cb(lv_event_t* e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED) {
+        lv_obj_t* btn = lv_event_get_target(e);
+        lv_obj_del(btn);
+    }
+}
+
+// 购物车项点击回调：点击商品项则删除该项
+void cart_list_item_event_cb(lv_event_t* e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED) {
+        lv_obj_t* item = lv_event_get_target(e);
+        // 只处理list的按钮项（lv_list_add_btn创建的对象）
+        if (item == cart_list) return;
+        // 检查类型，lv_list_btn_class是LVGL 8的list按钮类型
+        extern const lv_obj_class_t lv_list_btn_class;
+        if (!lv_obj_check_type(item, &lv_list_btn_class)) return;
+        // 不删除标题
+        const char* text = lv_list_get_btn_text(cart_list, item);
+        if (text && strcmp(text, "Checklist") != 0) {
+            lv_obj_del(item);
+        }
     }
 }
