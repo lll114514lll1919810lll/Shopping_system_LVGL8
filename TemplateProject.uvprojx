@@ -434,6 +434,11 @@
               <FileType>1</FileType>
               <FilePath>.\shop_ui.c</FilePath>
             </File>
+            <File>
+              <FileName>shop_chinese.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\shop_chinese.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -1138,6 +1143,11 @@
               <FileName>lv_font_unscii_16.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\lvgl\src\font\lv_font_unscii_16.c</FilePath>
+            </File>
+            <File>
+              <FileName>ziti.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\lvgl\user_lv_font\ziti.c</FilePath>
             </File>
           </Files>
         </Group>

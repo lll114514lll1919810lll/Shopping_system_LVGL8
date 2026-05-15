@@ -1,4 +1,5 @@
 #include "shop_app.h"
+#include "shop_chinese.h"
 
 // 优惠类型枚举
 typedef enum {
@@ -35,9 +36,10 @@ void product_btn_event_cb(lv_event_t * e)
 
         current_product = p; // 存入静态变量
 
-        // 动态设置文本框提示语
-        static char prompt_str[64];
-        snprintf(prompt_str, sizeof(prompt_str), "Qty for [%s] (%s):", p->name, p->unit);
+        // 动态设置文本框提示语（中文版）
+        static char prompt_str[96];
+        snprintf(prompt_str, sizeof(prompt_str), "%s%s%s%s%s", 
+                 CN_QTY_PREFIX, p->name, CN_QTY_MID, p->unit, CN_QTY_SUFFIX);
         lv_textarea_set_placeholder_text(input_ta, prompt_str);
         
         // 显示输入界面
@@ -62,13 +64,13 @@ void kb_event_cb(lv_event_t * e)
         const char * input_str = lv_textarea_get_text(input_ta);
         if(input_str && strlen(input_str) > 0) {
             // 检查是否为按个卖的商品
-            if(strcmp(current_product->unit, "box") == 0 ||
-               strcmp(current_product->unit, "pack") == 0 ||
-               strcmp(current_product->unit, "bottle") == 0) {
+            if(strcmp(current_product->unit, CN_BOX) == 0 ||
+               strcmp(current_product->unit, CN_PACK) == 0 ||
+               strcmp(current_product->unit, CN_BOTTLE) == 0) {
                 // 检查输入是否为整数（不能有小数点）
                 if(strchr(input_str, '.') != NULL) {
-                    static const char * btns[] = {"OK", ""};
-                    lv_obj_t * mbox = lv_msgbox_create(NULL, "Error", "This item must be an integer quantity!", btns, true);
+                    static const char * btns[] = {CN_OK, ""};
+                    lv_obj_t * mbox = lv_msgbox_create(NULL, CN_ERROR, CN_INT_ONLY, btns, true);
                     lv_obj_center(mbox);
                     // 隐藏输入界面
                     lv_obj_add_flag(input_ta, LV_OBJ_FLAG_HIDDEN);
@@ -85,7 +87,7 @@ void kb_event_cb(lv_event_t * e)
             
             // 准备新的文字内容
             static char buf[128];
-            snprintf(buf, sizeof(buf), "%s x%.1f %s = %.2f RMB", 
+            snprintf(buf, sizeof(buf), "%s x%.1f %s = %.2f " CN_YUAN, 
                      current_product->name, new_weight, current_product->unit, total_price);
 
             // --- 核心逻辑：寻找购物车中是否已存在该商品 ---
@@ -141,8 +143,8 @@ void checkout_btn_event_cb(lv_event_t * e)
     
     // 1. 检查购物车是否为空
     if(child_cnt == 0) {
-        static const char * btns[] = {"OK", ""};
-        lv_obj_t * mbox = lv_msgbox_create(NULL, "Hint", "Your cart is empty!", btns, true);
+        static const char * btns[] = {CN_OK, ""};
+        lv_obj_t * mbox = lv_msgbox_create(NULL, CN_HINT, CN_CART_EMPTY, btns, true);
 				lv_obj_center(mbox);
         return;
     }
@@ -167,15 +169,16 @@ void checkout_btn_event_cb(lv_event_t * e)
         case DISCOUNT_FULL_REDUCTION:   // 满20减5
             if (grand_total >= 20.0f) {
                 final_total = grand_total - 5.0f;
-                discount_desc = " (When 20 minus 5)";
+                discount_desc = CN_DESC_FULL;
             }
             break;
         case DISCOUNT_PERCENT_OFF:      // 9折
             final_total = grand_total * 0.9f;
-            discount_desc = " (90% price)";
+            discount_desc = CN_DESC_90PCT;
             break;
         case DISCOUNT_NONE:
         default:
+            discount_desc = CN_DESC_NONE;
             break;
     }
 
@@ -186,16 +189,16 @@ void checkout_btn_event_cb(lv_event_t * e)
     static char result_buf[128];
     if (grand_total != final_total) {
         snprintf(result_buf, sizeof(result_buf),
-                 "Before discount: %.2f RMB\nNow: %.2f RMB%s",
+                 CN_BEFORE_DISC ": %.2f " CN_YUAN "\n" CN_AFTER_DISC ": %.2f " CN_YUAN "%s",
                  grand_total, final_total, discount_desc);
     } else {
         snprintf(result_buf, sizeof(result_buf),
-                 "Total: %.2f RMB", final_total);
+                 CN_TOTAL ": %.2f " CN_YUAN, final_total);
     }
 
     // 5. 创建弹窗
-    static const char * mbtns[] = {"Close", ""};
-    lv_obj_t * mbox = lv_msgbox_create(NULL, "Succcess!", result_buf, mbtns, true);
+    static const char * mbtns[] = {CN_CLOSE, ""};
+    lv_obj_t * mbox = lv_msgbox_create(NULL, CN_SUCCESS, result_buf, mbtns, true);
     if(mbox) {
         lv_obj_center(mbox);
         lv_obj_t * mbox_txt = lv_msgbox_get_text(mbox);
@@ -276,7 +279,7 @@ void cart_list_item_event_cb(lv_event_t* e)
         if (!lv_obj_check_type(item, &lv_list_btn_class)) return;
         // 不删除标题
         const char* text = lv_list_get_btn_text(cart_list, item);
-        if (text && strcmp(text, "Checklist") != 0) {
+        if (text && strcmp(text, CN_CART_TITLE) != 0) {
             lv_obj_del(item);
         }
     }

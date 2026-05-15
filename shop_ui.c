@@ -1,4 +1,5 @@
 #include "shop_app.h"
+#include "shop_chinese.h"
 
 // SDRAM 模拟堆管理 (从 4MB 偏移处开始)
 static uint32_t sdram_heap_ptr = 0xC0000000 + (1024 * 1024 * 4); 
@@ -12,11 +13,11 @@ void * sdram_malloc(uint32_t size) {
 
 // 商品数据定义
 product_t shop_products[5] = {
-    {0, "Apple",      8,  "kg",     "0:/apple.bin"},
-    {1, "Milk",       6,  "box",    "0:/milk.bin"},
-    {2, "Bread",      12, "pack",   "0:/bread.bin"},
-    {3, "Watermelon", 3,  "kg",     "0:/xigua.bin"},
-    {4, "Cola",       3,  "bottle", "0:/cola.bin"}
+    {0, CN_APPLE,      8,  "kg",        "0:/apple.bin"},
+    {1, CN_MILK,       6,  CN_BOX,      "0:/milk.bin"},
+    {2, CN_BREAD,      12, CN_PACK,     "0:/bread.bin"},
+    {3, CN_WATERMELON, 3,  "kg",        "0:/xigua.bin"},
+    {4, CN_COLA,       3,  CN_BOTTLE,   "0:/cola.bin"}
 };
 
 lv_obj_t * cart_list = NULL;
@@ -65,7 +66,7 @@ void shop_ui_init(void)
 
         // 创建文字标签
         lv_obj_t * label = lv_label_create(item_cont);
-        lv_label_set_text_fmt(label, "%s\n#ff0000 %d RMB# / %s", 
+        lv_label_set_text_fmt(label, "%s\n#ff0000 %d " CN_YUAN "# / %s", 
                               shop_products[i].name, 
                               shop_products[i].price, 
                               shop_products[i].unit);
@@ -87,7 +88,7 @@ void shop_ui_init(void)
 
     // 标题
     lv_obj_t * cart_title = lv_label_create(cart_list);
-    lv_label_set_text(cart_title, "Checklist (Click to delete)");
+    lv_label_set_text(cart_title, CN_CART_TITLE);
     lv_obj_set_style_text_align(cart_title, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_width(cart_title, lv_pct(100));
 
@@ -117,7 +118,7 @@ void shop_ui_init(void)
     lv_obj_set_style_bg_color(btn_checkout, lv_palette_main(LV_PALETTE_GREEN), 0);
     lv_obj_add_event_cb(btn_checkout, checkout_btn_event_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t * lbl_checkout = lv_label_create(btn_checkout);
-    lv_label_set_text(lbl_checkout, "Checkout");
+    lv_label_set_text(lbl_checkout, CN_CHECKOUT);
     lv_obj_center(lbl_checkout);
 
     lv_obj_t * btn_clear = lv_btn_create(scr);
@@ -126,7 +127,7 @@ void shop_ui_init(void)
     lv_obj_set_style_bg_color(btn_clear, lv_palette_main(LV_PALETTE_RED), 0);
     lv_obj_add_event_cb(btn_clear, clear_btn_event_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t * lbl_clear = lv_label_create(btn_clear);
-    lv_label_set_text(lbl_clear, "Clear");
+    lv_label_set_text(lbl_clear, CN_CLEAR);
     lv_obj_center(lbl_clear);
 
 		//6.优惠
@@ -139,12 +140,12 @@ void shop_ui_init(void)
 
 			// 标题
 		lv_obj_t * discount_title = lv_label_create(discount_panel);
-		lv_label_set_text(discount_title, "Discounts");
+		lv_label_set_text(discount_title, CN_DISCOUNTS);
 		lv_obj_set_style_text_align(discount_title, LV_TEXT_ALIGN_CENTER, 0);
 		lv_obj_set_width(discount_title, lv_pct(100));
 
 		// 复选框选项（互斥组）
-		static const char * discount_opts[] = {"No discounts", "When 20 minus 5", "90% price", NULL};
+		static const char * discount_opts[] = {CN_NO_DISC, CN_FULL_RED, CN_90PCT, NULL};
 		for (int i = 0; discount_opts[i] != NULL; i++) {
 				lv_obj_t * cb = lv_checkbox_create(discount_panel);
 				lv_checkbox_set_text(cb, discount_opts[i]);
