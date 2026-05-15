@@ -27,6 +27,19 @@ extern lv_obj_t * num_kb;
 extern lv_obj_t * label_full;
 
 // --- A. 点击商品卡片的回调 ---
+
+// 延时清空购物车的定时器回调
+static void clear_cart_timer_cb(lv_timer_t * timer)
+{
+    if(cart_list != NULL) {
+        uint32_t child_cnt = lv_obj_get_child_cnt(cart_list);
+        for(int i = child_cnt - 1; i > 0; i--) {
+            lv_obj_del(lv_obj_get_child(cart_list, i));
+        }
+    }
+    lv_timer_del(timer); // 一次性定时器，自行删除
+}
+
 void product_btn_event_cb(lv_event_t * e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -69,8 +82,7 @@ void kb_event_cb(lv_event_t * e)
                strcmp(current_product->unit, CN_BOTTLE) == 0) {
                 // 检查输入是否为整数（不能有小数点）
                 if(strchr(input_str, '.') != NULL) {
-                    static const char * btns[] = {CN_OK, ""};
-                    lv_obj_t * mbox = lv_msgbox_create(NULL, CN_ERROR, CN_INT_ONLY, btns, true);
+                    lv_obj_t * mbox = lv_msgbox_create(NULL, CN_ERROR, CN_INT_ONLY, NULL, true);
                     lv_obj_center(mbox);
                     // 隐藏输入界面
                     lv_obj_add_flag(input_ta, LV_OBJ_FLAG_HIDDEN);
@@ -106,17 +118,12 @@ void kb_event_cb(lv_event_t * e)
             }
 
             if(existing_btn) {
-                // 如果找到了：直接更新这一行的文字
-                // 在 LVGL 的 list 按钮中，文字存在于它内部的 label 子对象里
-                lv_obj_t * label = lv_obj_get_child(existing_btn, -1); // 获取最后一个子对象，通常是 label
-                if(label) {
-                    lv_label_set_text(label, buf);
-                }
-            } else {
-                // 如果没找到：新增一行按钮，并注册点击删除事件
-                lv_obj_t* btn = lv_list_add_btn(cart_list, LV_SYMBOL_OK, buf);
-                lv_obj_add_event_cb(btn, cart_list_btn_event_cb, LV_EVENT_CLICKED, NULL);
+                // 删除旧项，再新增（避免直接修改 label 子对象导致文字追加）
+                lv_obj_del(existing_btn);
             }
+            // 新增一行按钮，并注册点击删除事件
+            lv_obj_t* btn = lv_list_add_btn(cart_list, LV_SYMBOL_OK, buf);
+            lv_obj_add_event_cb(btn, cart_list_btn_event_cb, LV_EVENT_CLICKED, NULL);
         }
 
         // 无论是否添加成功，都重置并隐藏输入界面
@@ -143,9 +150,8 @@ void checkout_btn_event_cb(lv_event_t * e)
     
     // 1. 检查购物车是否为空
     if(child_cnt == 0) {
-        static const char * btns[] = {CN_OK, ""};
-        lv_obj_t * mbox = lv_msgbox_create(NULL, CN_HINT, CN_CART_EMPTY, btns, true);
-				lv_obj_center(mbox);
+        lv_obj_t * mbox = lv_msgbox_create(NULL, CN_HINT, CN_CART_EMPTY, NULL, true);
+        lv_obj_center(mbox);
         return;
     }
 
@@ -161,6 +167,14 @@ void checkout_btn_event_cb(lv_event_t * e)
             }
         }
     }
+
+    // 3. 总价为0时提示购物车为空
+    if(grand_total == 0) {
+        lv_obj_t * mbox = lv_msgbox_create(NULL, CN_HINT, CN_CART_EMPTY, NULL, true);
+        lv_obj_center(mbox);
+        return;
+    }
+
 		//对grand_total进行打折
 		float final_total = grand_total;
     const char * discount_desc = "";
@@ -197,8 +211,7 @@ void checkout_btn_event_cb(lv_event_t * e)
     }
 
     // 5. 创建弹窗
-    static const char * mbtns[] = {CN_CLOSE, ""};
-    lv_obj_t * mbox = lv_msgbox_create(NULL, CN_SUCCESS, result_buf, mbtns, true);
+    lv_obj_t * mbox = lv_msgbox_create(NULL, CN_SUCCESS, result_buf, NULL, true);
     if(mbox) {
         lv_obj_center(mbox);
         lv_obj_t * mbox_txt = lv_msgbox_get_text(mbox);
@@ -206,6 +219,10 @@ void checkout_btn_event_cb(lv_event_t * e)
             lv_obj_set_style_text_color(mbox_txt, lv_palette_main(LV_PALETTE_RED), 0);
         }
     }
+
+    // 6. 延时0.5秒后清空购物车（保留标题）
+    lv_timer_t * t = lv_timer_create(clear_cart_timer_cb, 500, NULL);
+    lv_timer_set_repeat_count(t, 1);
 }
 
 // --- D. 清空回调 ---
