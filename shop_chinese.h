@@ -33,7 +33,7 @@
 // 动态提示字符串的中文部分（用于 snprintf 拼接）
 #define CN_QTY_PREFIX "\xe8\xaf\xb7\xe8\xbe\x93\xe5\x85\xa5 ["  // 请输入 [
 #define CN_QTY_MID    "] ("                                    // ] (
-#define CN_QTY_SUFFIX ") \xe6\x95\xb0\xe9\x87\x8f:"     // ) 数量:
+#define CN_QTY_SUFFIX ") \xe7\x9a\x84\xe6\x95\xb0\xe9\x87\x8f:"     // ) 的数量:
 
 // 弹窗/提示文字
 #define CN_OK         "\xe7\xa1\xae\xe5\xae\x9a"              // 确定
