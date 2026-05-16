@@ -55,6 +55,16 @@ typedef struct {
     uint32_t      next_id;                   // 下一笔交易序号
 } transaction_log_t;
 
+// 6. 键盘输入模式（决定确认后执行什么行为）
+typedef enum {
+    KB_MODE_NONE = 0,           // 空闲，无输入
+    KB_MODE_ADD_TO_CART,        // 添加商品到购物车
+    KB_MODE_EDIT_QUANTITY,      // 修改购物车中商品数量
+    // 可扩展更多模式：
+    // KB_MODE_SET_PRICE,       // 手动设置价格
+    // KB_MODE_INPUT_ID,        // 输入商品ID
+} kb_input_mode_t;
+
 /* ==================== 全局变量声明 ==================== */
 
 extern product_t shop_products[MAX_PRODUCTS];
@@ -78,6 +88,12 @@ void clear_btn_event_cb(lv_event_t * e);
 void label_event_cb(lv_event_t *e);
 void discount_cb_event_cb(lv_event_t * e);
 void create_discount_panel(lv_obj_t * parent);
+void cart_list_btn_event_cb(lv_event_t* e);
+
+/* 键盘输入界面控制（供其他模块复用键盘时调用） */
+void show_input_ui(void);                    // 显示键盘输入界面
+void hide_input_ui(void);                    // 隐藏键盘输入界面
+extern kb_input_mode_t current_kb_mode;      // 当前键盘输入模式（设置后决定确认行为）
 void cart_list_btn_event_cb(lv_event_t* e);
 
 /* ==================== 交易记录函数原型 ==================== */

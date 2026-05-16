@@ -8,10 +8,14 @@ typedef enum {
     DISCOUNT_PERCENT_OFF
 } discount_type_t;
 
+// 键盘输入模式枚举（决定确认后执行什么行为）
+// 定义在 shop_app.h 中，此处不再重复
+
 // 获取当前选中的优惠（供结算使用）
 discount_type_t get_current_discount(void);
 
 static discount_type_t current_discount = DISCOUNT_NONE;
+kb_input_mode_t current_kb_mode = KB_MODE_NONE;  // 当前键盘输入模式（外部可访问）
 
 discount_type_t get_current_discount(void) {
     return current_discount;
@@ -47,6 +51,7 @@ void product_btn_event_cb(lv_event_t * e)
         if(p == NULL || input_ta == NULL || num_kb == NULL) return;
 
         current_product = p; // 存入静态变量
+        current_kb_mode = KB_MODE_ADD_TO_CART;  // 设置输入模式
 
         // 动态设置文本框提示语（中文版）
         static char prompt_str[96];
@@ -55,89 +60,250 @@ void product_btn_event_cb(lv_event_t * e)
         lv_textarea_set_placeholder_text(input_ta, prompt_str);
         
         // 显示输入界面
-        lv_keyboard_set_textarea(num_kb, input_ta);
-        lv_obj_clear_flag(input_ta, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_clear_flag(num_kb, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_clear_flag(label_full, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_move_foreground(label_full);
-        lv_obj_move_foreground(num_kb);
-        lv_obj_move_foreground(input_ta);
+        show_input_ui();
     }
 }
 
-// --- B. 键盘确定键回调 (核心计算逻辑) ---
+// ========== 输入界面显示/隐藏 ==========
+
+/* 显示输入界面（键盘 + 文本框 + 遮罩） */
+void show_input_ui(void)
+{
+    lv_keyboard_set_textarea(num_kb, input_ta);
+    lv_obj_clear_flag(input_ta, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(num_kb, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(label_full, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(label_full);
+    lv_obj_move_foreground(num_kb);
+    lv_obj_move_foreground(input_ta);
+}
+
+// ========== 拆分的辅助函数 ==========
+
+/* 判断商品是否需要整数输入（按个卖的商品） */
+static bool is_integer_product(const product_t * product)
+{
+    if(product == NULL) return false;
+    
+    return (strcmp(product->unit, CN_BOX) == 0 ||
+            strcmp(product->unit, CN_PACK) == 0 ||
+            strcmp(product->unit, CN_BOTTLE) == 0);
+}
+
+/* 验证并解析输入，返回是否有效 */
+typedef enum {
+    INPUT_OK = 0,               // 输入有效
+    INPUT_ERR_DECIMAL,          // 整数商品输入了小数
+    INPUT_ERR_NON_POSITIVE      // 数量不是正数（<= 0）
+} input_error_t;
+
+typedef struct {
+    bool is_valid;
+    float quantity;
+    float total_price;
+    char item_text[128];
+    input_error_t error;        // 错误类型（is_valid=false 时有效）
+} input_result_t;
+
+static input_result_t validate_and_parse_input(const char * input_str, const product_t * product)
+{
+    input_result_t result = {0};
+    
+    if(input_str == NULL || strlen(input_str) == 0 || product == NULL) {
+        return result;
+    }
+    
+    // 检查整数商品不能有小数点
+    if(is_integer_product(product) && strchr(input_str, '.') != NULL) {
+        result.error = INPUT_ERR_DECIMAL;
+        return result;
+    }
+    
+    // 解析数量
+    result.quantity = (float)atof(input_str);
+    if(result.quantity <= 0) {
+        result.error = INPUT_ERR_NON_POSITIVE;
+        return result;
+    }
+    
+    // 计算总价
+    result.total_price = result.quantity * (float)product->price;
+    
+    // 构建购物车项文本
+    snprintf(result.item_text, sizeof(result.item_text), 
+             "%s x%.1f %s = %.2f " CN_YUAN, 
+             product->name, result.quantity, product->unit, result.total_price);
+    
+    result.is_valid = true;
+    return result;
+}
+
+/* 在购物车中查找指定商品的按钮项 */
+static lv_obj_t * find_cart_item_by_name(const char * product_name)
+{
+    if(cart_list == NULL || product_name == NULL) return NULL;
+    
+    uint32_t child_cnt = lv_obj_get_child_cnt(cart_list);
+    for(uint32_t i = 0; i < child_cnt; i++) {
+        lv_obj_t * child = lv_obj_get_child(cart_list, i);
+        const char * text = lv_list_get_btn_text(cart_list, child);
+        
+        if(text && strncmp(text, product_name, strlen(product_name)) == 0) {
+            return child;
+        }
+    }
+    return NULL;
+}
+
+/* 添加或更新购物车项 */
+static void add_or_update_cart_item(const char * item_text, const char * product_name)
+{
+    if(cart_list == NULL || item_text == NULL || product_name == NULL) return;
+    
+    // 查找是否已存在
+    lv_obj_t * existing_btn = find_cart_item_by_name(product_name);
+    if(existing_btn != NULL) {
+        lv_obj_del(existing_btn);
+    }
+    
+    // 添加新项
+    lv_obj_t * btn = lv_list_add_btn(cart_list, LV_SYMBOL_OK, item_text);
+    lv_obj_add_event_cb(btn, cart_list_btn_event_cb, LV_EVENT_CLICKED, NULL);
+}
+
+/* 隐藏输入界面并重置状态 */
+void hide_input_ui(void)
+{
+    if(input_ta != NULL) {
+        lv_obj_add_flag(input_ta, LV_OBJ_FLAG_HIDDEN);
+        lv_textarea_set_text(input_ta, "");
+    }
+    if(num_kb != NULL) {
+        lv_obj_add_flag(num_kb, LV_OBJ_FLAG_HIDDEN);
+    }
+    if(label_full != NULL) {
+        lv_obj_add_flag(label_full, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_background(label_full);
+    }
+    current_kb_mode = KB_MODE_NONE;  // 重置输入模式
+}
+
+/* 显示错误提示 */
+static void show_error_message(const char * title, const char * message)
+{
+    lv_obj_t * mbox = lv_msgbox_create(NULL, title, message, NULL, true);
+    lv_obj_center(mbox);
+}
+
+// ========== 键盘确认后的模式处理函数 ==========
+
+/* 处理"添加到购物车"模式的确认 */
+static void kb_mode_add_to_cart_handler(const char * input_str)
+{
+    if(current_product == NULL || cart_list == NULL) {
+        hide_input_ui();
+        return;
+    }
+
+    // 验证并解析输入
+    input_result_t result = validate_and_parse_input(input_str, current_product);
+    
+    if(!result.is_valid) {
+        // 根据错误类型显示不同提示
+        switch(result.error) {
+            case INPUT_ERR_DECIMAL:
+                show_error_message(CN_ERROR, CN_INT_ONLY);
+                break;
+            case INPUT_ERR_NON_POSITIVE:
+                show_error_message(CN_ERROR, CN_QTY_POSITIVE);
+                break;
+            default:
+                break;
+        }
+        hide_input_ui();
+        return;
+    }
+
+    // 添加到购物车
+    add_or_update_cart_item(result.item_text, current_product->name);
+    hide_input_ui();
+}
+
+/* 处理"修改数量"模式的确认 */
+static void kb_mode_edit_quantity_handler(const char * input_str)
+{
+    if(current_product == NULL || cart_list == NULL) {
+        hide_input_ui();
+        return;
+    }
+
+    // 验证并解析输入
+    input_result_t result = validate_and_parse_input(input_str, current_product);
+    
+    if(!result.is_valid) {
+        switch(result.error) {
+            case INPUT_ERR_DECIMAL:
+                show_error_message(CN_ERROR, CN_INT_ONLY);
+                break;
+            case INPUT_ERR_NON_POSITIVE:
+                show_error_message(CN_ERROR, CN_QTY_POSITIVE);
+                break;
+            default:
+                break;
+        }
+        hide_input_ui();
+        return;
+    }
+
+    // 根据商品名查找购物车中的项
+    lv_obj_t * existing_btn = find_cart_item_by_name(current_product->name);
+    if(existing_btn != NULL) {
+        lv_obj_del(existing_btn);
+    }
+
+    // 添加新的购物车项
+    lv_obj_t * btn = lv_list_add_btn(cart_list, LV_SYMBOL_OK, result.item_text);
+    lv_obj_add_event_cb(btn, cart_list_btn_event_cb, LV_EVENT_CLICKED, NULL);
+
+    hide_input_ui();
+}
+
+// --- B. 键盘事件回调 (模式分发) ---
 void kb_event_cb(lv_event_t * e)
 {
     lv_event_code_t code = lv_event_get_code(e);
 
-    // 只有在按下键盘的“确定”（READY）键时才处理
     if(code == LV_EVENT_READY) {
-        if(cart_list == NULL || input_ta == NULL || current_product == NULL) return;
+        if(input_ta == NULL) return;
 
         const char * input_str = lv_textarea_get_text(input_ta);
-        if(input_str && strlen(input_str) > 0) {
-            // 检查是否为按个卖的商品
-            if(strcmp(current_product->unit, CN_BOX) == 0 ||
-               strcmp(current_product->unit, CN_PACK) == 0 ||
-               strcmp(current_product->unit, CN_BOTTLE) == 0) {
-                // 检查输入是否为整数（不能有小数点）
-                if(strchr(input_str, '.') != NULL) {
-                    lv_obj_t * mbox = lv_msgbox_create(NULL, CN_ERROR, CN_INT_ONLY, NULL, true);
-                    lv_obj_center(mbox);
-                    // 隐藏输入界面
-                    lv_obj_add_flag(input_ta, LV_OBJ_FLAG_HIDDEN);
-                    lv_obj_add_flag(num_kb, LV_OBJ_FLAG_HIDDEN);
-                    lv_textarea_set_text(input_ta, "");
-                    lv_obj_move_background(label_full);
-                    return;
-                }
-            }
-            float new_weight = (float)atof(input_str);
-            if(new_weight < 0) return; // 忽略无效输入
-
-            float total_price = new_weight * (float)current_product->price;
-            
-            // 准备新的文字内容
-            static char buf[128];
-            snprintf(buf, sizeof(buf), "%s x%.1f %s = %.2f " CN_YUAN, 
-                     current_product->name, new_weight, current_product->unit, total_price);
-
-            // --- 核心逻辑：寻找购物车中是否已存在该商品 ---
-            lv_obj_t * existing_btn = NULL;
-            uint32_t child_cnt = lv_obj_get_child_cnt(cart_list);
-            
-            for(uint32_t i = 0; i < child_cnt; i++) {
-                lv_obj_t * child = lv_obj_get_child(cart_list, i);
-                const char * text = lv_list_get_btn_text(cart_list, child);
-                
-                // 检查列表里的文字是否是以当前商品名开头的
-                if(text && strncmp(text, current_product->name, strlen(current_product->name)) == 0) {
-                    existing_btn = child;
-                    break;
-                }
-            }
-
-            if(existing_btn) {
-                // 删除旧项，再新增（避免直接修改 label 子对象导致文字追加）
-                lv_obj_del(existing_btn);
-            }
-            // 新增一行按钮，并注册点击删除事件
-            lv_obj_t* btn = lv_list_add_btn(cart_list, LV_SYMBOL_OK, buf);
-            lv_obj_add_event_cb(btn, cart_list_btn_event_cb, LV_EVENT_CLICKED, NULL);
+        if(input_str == NULL || strlen(input_str) == 0) {
+            hide_input_ui();
+            return;
         }
 
-        // 无论是否添加成功，都重置并隐藏输入界面
-        lv_obj_add_flag(input_ta, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(num_kb, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(label_full, LV_OBJ_FLAG_HIDDEN);
-        lv_textarea_set_text(input_ta, "");
-		lv_obj_move_background(label_full);
+        // 根据当前输入模式分发到对应的处理函数
+        switch(current_kb_mode) {
+            case KB_MODE_ADD_TO_CART:
+                kb_mode_add_to_cart_handler(input_str);
+                break;
+            case KB_MODE_EDIT_QUANTITY:
+                kb_mode_edit_quantity_handler(input_str);
+                break;
+            
+            // 可扩展更多模式处理：
+            // case KB_MODE_SET_PRICE:
+            //     kb_mode_set_price_handler(input_str);
+            //     break;
+            
+            case KB_MODE_NONE:
+            default:
+                hide_input_ui();
+                break;
+        }
     }
     else if(code == LV_EVENT_CANCEL) {
-        lv_obj_add_flag(input_ta, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(num_kb, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_add_flag(label_full, LV_OBJ_FLAG_HIDDEN);
-		lv_obj_move_background(label_full);
+        hide_input_ui();
     }
 }
 
@@ -344,14 +510,119 @@ void discount_cb_event_cb(lv_event_t * e) {
     }
 }
 
-// 购物车按钮项点击回调：点击商品项则删除该项
+// 购物车操作菜单辅助函数前向声明
+static void cart_item_delete_cb(lv_event_t * e);
+static void cart_item_edit_qty_cb(lv_event_t * e);
+static void cart_action_btnmatrix_cb(lv_event_t * e);
+
+// 购物车按钮项点击回调：点击商品项弹出操作菜单（删除/修改数量）
 void cart_list_btn_event_cb(lv_event_t* e)
 {
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_CLICKED) {
-        lv_obj_t* btn = lv_event_get_target(e);
+        lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
+        if(btn == NULL) return;
+
+        // 获取当前商品项的文字，提取商品名以定位 product
+        const char * text = lv_list_get_btn_text(cart_list, btn);
+        if(text == NULL) return;
+
+        // 反向查找对应的商品
+        product_t * target_product = NULL;
+        for(uint8_t j = 0; j < MAX_PRODUCTS; j++) {
+            if(strncmp(text, shop_products[j].name, strlen(shop_products[j].name)) == 0) {
+                target_product = &shop_products[j];
+                break;
+            }
+        }
+
+        // 创建操作选择弹窗（使用 btnmatrix），标题栏右侧带 ? 关闭按钮
+        static const char * action_btns[] = {CN_DELETE_ITEM, CN_EDIT_QTY, ""};
+        lv_obj_t * mbox = lv_msgbox_create(NULL, CN_CART_ACTION, NULL, action_btns, true);
+        lv_obj_center(mbox);
+
+        /* 获取消息框内部的按钮矩阵，并为其添加事件回调。
+         * 回调通过 user_data 传入被操作的列表按钮（btn），
+         * 根据选中的按钮索引执行删除或修改数量操作。
+         */
+        lv_obj_t * btnm = lv_msgbox_get_btns(mbox);
+        if(btnm != NULL) {
+            lv_obj_add_event_cb(btnm, cart_action_btnmatrix_cb, LV_EVENT_VALUE_CHANGED, btn);
+        }
+    }
+}
+
+/* 操作菜单 - 删除按钮回调 */
+static void cart_item_delete_cb(lv_event_t * e)
+{
+    lv_obj_t * btn = (lv_obj_t *)lv_event_get_user_data(e);
+    if(btn != NULL) {
         lv_obj_del(btn);
     }
+    // 关闭弹窗（点击弹窗外部或按钮后 msgbox 自动关闭）
+}
+
+/* 操作菜单 - 修改数量按钮回调 */
+static void cart_item_edit_qty_cb(lv_event_t * e)
+{
+    product_t * p = (product_t *)lv_event_get_user_data(e);
+    if(p == NULL || input_ta == NULL || num_kb == NULL) return;
+
+    current_product = p;
+
+    // 设置输入模式为修改数量
+    current_kb_mode = KB_MODE_EDIT_QUANTITY;
+
+    // 动态设置文本框提示语
+    static char prompt_str[96];
+    snprintf(prompt_str, sizeof(prompt_str), "%s%s%s",
+             CN_NEW_QTY_PREFIX, p->name, CN_NEW_QTY_MID);
+    lv_textarea_set_placeholder_text(input_ta, prompt_str);
+
+    // 显示输入界面
+    show_input_ui();
+}
+
+/* 按钮矩阵事件回调：处理购物车操作（删除 / 修改数量） */
+static void cart_action_btnmatrix_cb(lv_event_t * e)
+{
+    if(lv_event_get_code(e) != LV_EVENT_VALUE_CHANGED) return;
+
+    lv_obj_t * btnm = lv_event_get_target(e);
+    int sel = (int)lv_btnmatrix_get_selected_btn(btnm);
+    lv_obj_t * list_btn = (lv_obj_t *)lv_event_get_user_data(e);
+    if(list_btn == NULL) return;
+
+    if(sel == 0) {
+        /* 删除商品 */
+        lv_obj_del(list_btn);
+    } else if(sel == 1) {
+        /* 修改数量：根据按钮文本查找对应商品并进入编辑模式 */
+        const char * text = lv_list_get_btn_text(cart_list, list_btn);
+        if(text) {
+            product_t * target_product = NULL;
+            for(uint8_t j = 0; j < MAX_PRODUCTS; j++) {
+                if(strncmp(text, shop_products[j].name, strlen(shop_products[j].name)) == 0) {
+                    target_product = &shop_products[j];
+                    break;
+                }
+            }
+            if(target_product) {
+                current_product = target_product;
+                current_kb_mode = KB_MODE_EDIT_QUANTITY;
+
+                static char prompt_str[96];
+                snprintf(prompt_str, sizeof(prompt_str), "%s%s%s",
+                         CN_NEW_QTY_PREFIX, target_product->name, CN_NEW_QTY_MID);
+                lv_textarea_set_placeholder_text(input_ta, prompt_str);
+                show_input_ui();
+            }
+        }
+    }
+
+    /* 关闭消息框 */
+    lv_obj_t * mbox = lv_obj_get_parent(btnm);
+    if(mbox) lv_msgbox_close(mbox);
 }
 
 // ==================== 交易历史面板 ====================
