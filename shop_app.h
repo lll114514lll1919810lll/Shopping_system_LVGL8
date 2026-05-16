@@ -83,6 +83,10 @@ void tx_log_clear(void);                                    // 清空所有交易记录
 int  tx_log_save_to_sd(void);                               // 保存到 SD 卡
 int  tx_log_load_from_sd(void);                             // 从 SD 卡加载
 
+/* ==================== 交易历史界面 ==================== */
+void show_history_panel(void);                              // 显示交易历史面板
+void history_btn_event_cb(lv_event_t * e);                  // 交易记录按钮回调
+
 /* ==================== 底层接口 ==================== */
 extern void * sdram_malloc(uint32_t size);
 extern void read_file_to_array(const char *filename, void *array, uint32_t size);

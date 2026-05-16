@@ -130,6 +130,16 @@ void shop_ui_init(void)
     lv_label_set_text(lbl_clear, CN_CLEAR);
     lv_obj_center(lbl_clear);
 
+    // 5b. 交易记录按钮
+    lv_obj_t * btn_history = lv_btn_create(scr);
+    lv_obj_set_size(btn_history, 110, 50);
+    lv_obj_set_pos(btn_history, 540, 475);
+    lv_obj_set_style_bg_color(btn_history, lv_palette_main(LV_PALETTE_BLUE), 0);
+    lv_obj_add_event_cb(btn_history, history_btn_event_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t * lbl_history = lv_label_create(btn_history);
+    lv_label_set_text(lbl_history, CN_HISTORY);
+    lv_obj_center(lbl_history);
+
 		//6.优惠
 		lv_obj_t * discount_panel = lv_obj_create(scr);
 		lv_obj_set_size(discount_panel, 220, 450);

@@ -330,3 +330,344 @@ void cart_list_btn_event_cb(lv_event_t* e)
         lv_obj_del(btn);
     }
 }
+
+// ==================== 交易历史面板 ====================
+#define HIST_PAGE_SIZE  5   // 每页显示条数
+
+static lv_obj_t * hist_panel = NULL;    // 历史面板容器
+static lv_obj_t * hist_list  = NULL;    // 交易列表
+static lv_obj_t * hist_page_label = NULL; // 页码标签
+static int hist_current_page = 0;       // 当前页（0-based）
+static int hist_total_pages  = 1;       // 总页数
+
+// 前向声明
+static void hist_list_item_cb(lv_event_t * e);
+static void refresh_history_list(void);
+
+/* 获取折扣描述文字 */
+static const char * get_discount_desc_str(tx_discount_type_t type)
+{
+    switch(type) {
+        case TX_DISC_FULL_REDUCTION: return CN_DESC_FULL;
+        case TX_DISC_PERCENT_OFF:    return CN_DESC_90PCT;
+        default:                     return CN_DESC_NONE;
+    }
+}
+
+/* 刷新历史列表（根据当前页码重绘） */
+static void refresh_history_list(void)
+{
+    if(hist_list == NULL) return;
+
+    // 清空列表
+    lv_obj_clean(hist_list);
+
+    int total = (int)tx_log.count;
+    hist_total_pages = (total + HIST_PAGE_SIZE - 1) / HIST_PAGE_SIZE;
+    if(hist_total_pages < 1) hist_total_pages = 1;
+
+    // 边界修正
+    if(hist_current_page >= hist_total_pages) hist_current_page = hist_total_pages - 1;
+    if(hist_current_page < 0) hist_current_page = 0;
+
+    int start_idx = hist_current_page * HIST_PAGE_SIZE;
+    int end_idx = start_idx + HIST_PAGE_SIZE;
+    if(end_idx > total) end_idx = total;
+
+    // 无记录提示
+    if(total == 0) {
+        lv_obj_t * lbl = lv_label_create(hist_list);
+        lv_label_set_text(lbl, CN_TX_EMPTY);
+        lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_width(lbl, lv_pct(100));
+    } else {
+        // 倒序显示（最新在前）
+        for(int i = end_idx - 1; i >= start_idx; i--) {
+            transaction_t * tx = &tx_log.records[i];
+
+            // 构建行文字: "#交易记录N | M项商品 | 实付: XX.XX 元"
+            static char line_buf[128];
+            if(tx->total_before_discount != tx->total_after_discount) {
+                snprintf(line_buf, sizeof(line_buf),
+                         "%s%lu | %d " CN_TX_ITEMS " | " CN_TX_PAY ": %.2f " CN_YUAN,
+                         CN_TX_ID, (unsigned long)tx->id, (int)tx->item_count,
+                         tx->total_after_discount);
+            } else {
+                snprintf(line_buf, sizeof(line_buf),
+                         "%s%lu | %d " CN_TX_ITEMS " | " CN_TX_TOTAL ": %.2f " CN_YUAN,
+                         CN_TX_ID, (unsigned long)tx->id, (int)tx->item_count,
+                         tx->total_after_discount);
+            }
+
+            lv_obj_t * btn = lv_list_add_btn(hist_list, LV_SYMBOL_FILE, line_buf);
+            lv_obj_add_event_cb(btn, hist_list_item_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)i);
+        }
+    }
+
+    // 更新页码文字
+    if(hist_page_label) {
+        static char page_buf[32];
+        snprintf(page_buf, sizeof(page_buf), CN_PAGE_FMT,
+                 hist_current_page + 1, hist_total_pages);
+        lv_label_set_text(hist_page_label, page_buf);
+    }
+}
+
+/* 关闭历史面板（同时删除遮罩层） */
+static void close_history_panel(void)
+{
+    if(hist_panel) {
+        lv_obj_t * overlay = lv_obj_get_parent(hist_panel);
+        lv_obj_del(overlay);          // 删除遮罩层，它会连带删除子对象 hist_panel
+        hist_panel = NULL;
+        hist_list = NULL;
+        hist_page_label = NULL;
+        hist_current_page = 0;
+    }
+}
+
+/* 关闭交易详情弹窗 */
+static void close_detail_popup(lv_event_t * e)
+{
+    lv_obj_t * popup = (lv_obj_t *)lv_event_get_user_data(e);
+    if(popup) lv_obj_del(popup);
+}
+
+/* 翻页回调 */
+static void hist_prev_cb(lv_event_t * e)
+{
+    (void)e;
+    if(hist_current_page > 0) {
+        hist_current_page--;
+        refresh_history_list();
+    }
+}
+
+static void hist_next_cb(lv_event_t * e)
+{
+    (void)e;
+    if(hist_current_page < hist_total_pages - 1) {
+        hist_current_page++;
+        refresh_history_list();
+    }
+}
+
+/* 关闭面板回调 */
+static void hist_close_cb(lv_event_t * e)
+{
+    (void)e;
+    close_history_panel();
+}
+
+/* 点击交易行 → 显示详情弹窗 */
+static void hist_list_item_cb(lv_event_t * e)
+{
+    lv_obj_t * btn = lv_event_get_target(e);
+    int idx = (int)(uintptr_t)lv_event_get_user_data(e);
+
+    if(idx < 0 || idx >= (int)tx_log.count) return;
+    transaction_t * tx = &tx_log.records[idx];
+
+    // 创建全屏半透明遮罩
+    lv_obj_t * overlay = lv_obj_create(lv_scr_act());
+    lv_obj_set_size(overlay, 1024, 600);
+    lv_obj_set_pos(overlay, 0, 0);
+    lv_obj_set_style_bg_color(overlay, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(overlay, LV_OPA_60, 0);
+    lv_obj_clear_flag(overlay, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_event_cb(overlay, close_detail_popup, LV_EVENT_CLICKED, overlay);
+
+    // 详情弹窗
+    lv_obj_t * popup = lv_obj_create(overlay);
+    lv_obj_set_size(popup, 500, 450);
+    lv_obj_center(popup);
+    lv_obj_set_style_bg_color(popup, lv_color_white(), 0);
+    lv_obj_set_style_bg_opa(popup, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(popup, 2, 0);
+    lv_obj_set_style_border_color(popup, lv_palette_main(LV_PALETTE_BLUE), 0);
+    lv_obj_set_style_radius(popup, 10, 0);
+    lv_obj_set_flex_flow(popup, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_pad_gap(popup, 6, 0);
+    lv_obj_set_style_pad_all(popup, 15, 0);
+    lv_obj_clear_flag(popup, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(popup, LV_OBJ_FLAG_CLICKABLE); // 阻止点击穿透到遮罩
+
+    // 标题
+    lv_obj_t * title_lbl = lv_label_create(popup);
+    static char title_buf[48];
+    snprintf(title_buf, sizeof(title_buf), "%s #%lu", CN_TX_DETAIL, (unsigned long)tx->id);
+    lv_label_set_text(title_lbl, title_buf);
+    lv_obj_set_style_text_font(title_lbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(title_lbl, lv_palette_main(LV_PALETTE_BLUE), 0);
+
+    // 金额信息
+    lv_obj_t * money_lbl = lv_label_create(popup);
+    static char money_buf[160];
+    const char * disc_str = get_discount_desc_str(tx->discount_type);
+    if(tx->total_before_discount != tx->total_after_discount) {
+        snprintf(money_buf, sizeof(money_buf),
+                 CN_BEFORE_DISC ": %.2f " CN_YUAN "\n"
+                 CN_AFTER_DISC  ": %.2f " CN_YUAN "%s\n"
+                 CN_TX_DISC_FMT,
+                 tx->total_before_discount, tx->total_after_discount,
+                 disc_str, disc_str);
+    } else {
+        snprintf(money_buf, sizeof(money_buf),
+                 CN_TOTAL ": %.2f " CN_YUAN "\n" CN_NO_DISC,
+                 tx->total_after_discount);
+    }
+    lv_label_set_text(money_lbl, money_buf);
+    lv_obj_set_style_text_color(money_lbl, lv_palette_main(LV_PALETTE_RED), 0);
+
+    // 商品明细（可滚动）
+    lv_obj_t * items_cont = lv_obj_create(popup);
+    lv_obj_set_width(items_cont, lv_pct(100));
+    lv_obj_set_flex_grow(items_cont, 1);
+    lv_obj_set_style_border_width(items_cont, 0, 0);
+    lv_obj_set_style_bg_opa(items_cont, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_pad_gap(items_cont, 4, 0);
+    lv_obj_set_style_pad_all(items_cont, 0, 0);
+
+    for(uint8_t j = 0; j < tx->item_count; j++) {
+        uint8_t pid = tx->items[j].product_id;
+        if(pid < MAX_PRODUCTS) {
+            static char item_buf[96];
+            snprintf(item_buf, sizeof(item_buf),
+                     "%s " CN_QTY_X "%.1f %s = %.2f " CN_YUAN,
+                     shop_products[pid].name,
+                     tx->items[j].quantity,
+                     shop_products[pid].unit,
+                     tx->items[j].subtotal);
+
+            lv_obj_t * item_lbl = lv_label_create(items_cont);
+            lv_label_set_text(item_lbl, item_buf);
+        }
+    }
+
+    // 确定/关闭按钮
+    lv_obj_t * close_btn = lv_btn_create(popup);
+    lv_obj_set_size(close_btn, lv_pct(60), 40);
+    lv_obj_set_style_bg_color(close_btn, lv_palette_main(LV_PALETTE_BLUE), 0);
+    lv_obj_add_event_cb(close_btn, close_detail_popup, LV_EVENT_CLICKED, overlay);
+    lv_obj_t * close_lbl = lv_label_create(close_btn);
+    lv_label_set_text(close_lbl, CN_OK);
+    lv_obj_center(close_lbl);
+}
+
+/* 清空交易记录回调 */
+static void hist_clear_cb(lv_event_t * e)
+{
+    (void)e;
+    tx_log_clear();
+    hist_current_page = 0;
+    refresh_history_list();
+}
+
+/* 显示交易历史面板（全屏遮罩） */
+void show_history_panel(void)
+{
+    // 避免重复打开
+    if(hist_panel) return;
+
+    // 全屏遮罩
+    lv_obj_t * overlay = lv_obj_create(lv_scr_act());
+    lv_obj_set_size(overlay, 1024, 600);
+    lv_obj_set_pos(overlay, 0, 0);
+    lv_obj_set_style_bg_color(overlay, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(overlay, LV_OPA_50, 0);
+    lv_obj_clear_flag(overlay, LV_OBJ_FLAG_SCROLLABLE);
+
+    hist_panel = lv_obj_create(overlay);
+    lv_obj_set_size(hist_panel, 600, 520);
+    lv_obj_center(hist_panel);
+    lv_obj_set_style_bg_color(hist_panel, lv_color_white(), 0);
+    lv_obj_set_style_bg_opa(hist_panel, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(hist_panel, 2, 0);
+    lv_obj_set_style_border_color(hist_panel, lv_palette_main(LV_PALETTE_BLUE), 0);
+    lv_obj_set_style_radius(hist_panel, 10, 0);
+    lv_obj_set_flex_flow(hist_panel, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_style_pad_gap(hist_panel, 8, 0);
+    lv_obj_set_style_pad_all(hist_panel, 15, 0);
+    lv_obj_clear_flag(hist_panel, LV_OBJ_FLAG_SCROLLABLE);
+
+    // 顶部：标题 + 关闭按钮
+    lv_obj_t * top_row = lv_obj_create(hist_panel);
+    lv_obj_set_size(top_row, lv_pct(100), 40);
+    lv_obj_set_style_border_width(top_row, 0, 0);
+    lv_obj_set_style_bg_opa(top_row, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_pad_all(top_row, 0, 0);
+    lv_obj_clear_flag(top_row, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t * title = lv_label_create(top_row);
+    lv_label_set_text(title, CN_HISTORY_TITLE);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_BLUE), 0);
+    lv_obj_align(title, LV_ALIGN_LEFT_MID, 0, 0);
+
+    lv_obj_t * close_btn = lv_btn_create(top_row);
+    lv_obj_set_size(close_btn, 80, 32);
+    lv_obj_align(close_btn, LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_obj_set_style_bg_color(close_btn, lv_palette_main(LV_PALETTE_RED), 0);
+    lv_obj_add_event_cb(close_btn, hist_close_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t * close_lbl = lv_label_create(close_btn);
+    lv_label_set_text(close_lbl, CN_CLOSE_BTN);
+    lv_obj_center(close_lbl);
+
+    // 中部：交易列表（可滚动）
+    hist_list = lv_list_create(hist_panel);
+    lv_obj_set_width(hist_list, lv_pct(100));
+    lv_obj_set_flex_grow(hist_list, 1);
+    lv_obj_set_style_pad_gap(hist_list, 8, 0);
+
+    // 底部：翻页 + 清空
+    lv_obj_t * bottom_row = lv_obj_create(hist_panel);
+    lv_obj_set_size(bottom_row, lv_pct(100), 45);
+    lv_obj_set_style_border_width(bottom_row, 0, 0);
+    lv_obj_set_style_bg_opa(bottom_row, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_pad_all(bottom_row, 0, 0);
+    lv_obj_clear_flag(bottom_row, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t * btn_prev = lv_btn_create(bottom_row);
+    lv_obj_set_size(btn_prev, 80, 36);
+    lv_obj_align(btn_prev, LV_ALIGN_LEFT_MID, 0, 0);
+    lv_obj_set_style_bg_color(btn_prev, lv_palette_main(LV_PALETTE_GREY), 0);
+    lv_obj_add_event_cb(btn_prev, hist_prev_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t * lbl_prev = lv_label_create(btn_prev);
+    lv_label_set_text(lbl_prev, CN_PAGE_PREV);
+    lv_obj_center(lbl_prev);
+
+    hist_page_label = lv_label_create(bottom_row);
+    lv_obj_align(hist_page_label, LV_ALIGN_CENTER, 0, 0);
+    lv_label_set_text(hist_page_label, "");
+
+    lv_obj_t * btn_next = lv_btn_create(bottom_row);
+    lv_obj_set_size(btn_next, 80, 36);
+    lv_obj_align(btn_next, LV_ALIGN_RIGHT_MID, 0, 0);
+    lv_obj_set_style_bg_color(btn_next, lv_palette_main(LV_PALETTE_GREY), 0);
+    lv_obj_add_event_cb(btn_next, hist_next_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t * lbl_next = lv_label_create(btn_next);
+    lv_label_set_text(lbl_next, CN_PAGE_NEXT);
+    lv_obj_center(lbl_next);
+
+    // 清空记录按钮
+    lv_obj_t * btn_clr = lv_btn_create(bottom_row);
+    lv_obj_set_size(btn_clr, 90, 36);
+    lv_obj_align(btn_clr, LV_ALIGN_RIGHT_MID, -95, 0);
+    lv_obj_set_style_bg_color(btn_clr, lv_palette_main(LV_PALETTE_RED), 0);
+    lv_obj_add_event_cb(btn_clr, hist_clear_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t * lbl_clr = lv_label_create(btn_clr);
+    lv_label_set_text(lbl_clr, CN_HISTORY_CLR);
+    lv_obj_center(lbl_clr);
+
+    // 首次加载数据
+    hist_current_page = 0;
+    refresh_history_list();
+}
+
+/* 交易记录按钮回调 */
+void history_btn_event_cb(lv_event_t * e)
+{
+    if(lv_event_get_code(e) == LV_EVENT_CLICKED) {
+        show_history_panel();
+    }
+}
