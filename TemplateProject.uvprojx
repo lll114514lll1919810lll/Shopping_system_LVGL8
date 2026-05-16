@@ -439,6 +439,11 @@
               <FileType>5</FileType>
               <FilePath>.\shop_chinese.h</FilePath>
             </File>
+            <File>
+              <FileName>tx_log.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\tx_log.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

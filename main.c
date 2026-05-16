@@ -16,6 +16,9 @@ int main()
     lv_port_disp_init();
     lv_port_indev_init();
     
+    // 初始化交易记录系统（从SD卡加载历史记录）
+    tx_log_init();
+    
     shop_ui_init(); 
 
     while(1){

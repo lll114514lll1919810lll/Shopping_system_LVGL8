@@ -199,7 +199,55 @@ void checkout_btn_event_cb(lv_event_t * e)
     // 防止折扣后金额为负数
     if (final_total < 0) final_total = 0;
 
-		// 4. 准备结果字符串 (扩大缓冲区，容纳折扣信息)
+    // 4. 构建交易记录对象并保存到 SD 卡
+    transaction_t tx;
+    memset(&tx, 0, sizeof(transaction_t));
+    
+    tx.total_before_discount = grand_total;
+    tx.total_after_discount = final_total;
+    tx.discount_type = (tx_discount_type_t)current_discount;
+    tx.item_count = 0;
+
+    // 遍历购物车，提取每个商品的明细（排除标题行）
+    for(uint32_t i = 1; i < child_cnt && tx.item_count < MAX_TX_ITEMS_PER_TX; i++) {
+        lv_obj_t * child = lv_obj_get_child(cart_list, i);
+        const char * text = lv_list_get_btn_text(cart_list, child);
+        
+        if(text) {
+            // 格式: "苹果 x2.0 kg = 16.00 元"
+            // 从文字中提取商品名、数量、小计
+            
+            // 反向查找商品 ID
+            uint8_t product_id = 0xFF;
+            for(uint8_t j = 0; j < MAX_PRODUCTS; j++) {
+                if(strncmp(text, shop_products[j].name, strlen(shop_products[j].name)) == 0) {
+                    product_id = j;
+                    break;
+                }
+            }
+
+            if(product_id != 0xFF) {
+                // 解析数量和小计
+                const char * x_pos = strchr(text, 'x');
+                const char * eq_pos = strchr(text, '=');
+                
+                if(x_pos && eq_pos) {
+                    float quantity = (float)atof(x_pos + 1);
+                    float subtotal = (float)atof(eq_pos + 1);
+                    
+                    tx.items[tx.item_count].product_id = product_id;
+                    tx.items[tx.item_count].quantity = quantity;
+                    tx.items[tx.item_count].subtotal = subtotal;
+                    tx.item_count++;
+                }
+            }
+        }
+    }
+
+    // 保存交易记录到 RAM + SD 卡
+    tx_log_add(&tx);
+
+		// 5. 准备结果字符串 (扩大缓冲区，容纳折扣信息)
     static char result_buf[128];
     if (grand_total != final_total) {
         snprintf(result_buf, sizeof(result_buf),
@@ -210,7 +258,7 @@ void checkout_btn_event_cb(lv_event_t * e)
                  CN_TOTAL ": %.2f " CN_YUAN, final_total);
     }
 
-    // 5. 创建弹窗
+    // 6. 创建弹窗
     lv_obj_t * mbox = lv_msgbox_create(NULL, CN_SUCCESS, result_buf, NULL, true);
     if(mbox) {
         lv_obj_center(mbox);
@@ -220,7 +268,7 @@ void checkout_btn_event_cb(lv_event_t * e)
         }
     }
 
-    // 6. 延时0.5秒后清空购物车（保留标题）
+    // 7. 延时0.5秒后清空购物车（保留标题）
     lv_timer_t * t = lv_timer_create(clear_cart_timer_cb, 500, NULL);
     lv_timer_set_repeat_count(t, 1);
 }
@@ -280,24 +328,5 @@ void cart_list_btn_event_cb(lv_event_t* e)
     if (code == LV_EVENT_CLICKED) {
         lv_obj_t* btn = lv_event_get_target(e);
         lv_obj_del(btn);
-    }
-}
-
-// 购物车项点击回调：点击商品项则删除该项
-void cart_list_item_event_cb(lv_event_t* e)
-{
-    lv_event_code_t code = lv_event_get_code(e);
-    if (code == LV_EVENT_CLICKED) {
-        lv_obj_t* item = lv_event_get_target(e);
-        // 只处理list的按钮项（lv_list_add_btn创建的对象）
-        if (item == cart_list) return;
-        // 检查类型，lv_list_btn_class是LVGL 8的list按钮类型
-        extern const lv_obj_class_t lv_list_btn_class;
-        if (!lv_obj_check_type(item, &lv_list_btn_class)) return;
-        // 不删除标题
-        const char* text = lv_list_get_btn_text(cart_list, item);
-        if (text && strcmp(text, CN_CART_TITLE) != 0) {
-            lv_obj_del(item);
-        }
     }
 }
