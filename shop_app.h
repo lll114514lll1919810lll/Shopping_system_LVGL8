@@ -7,9 +7,9 @@
 #include <string.h>
 
 /* ==================== 常量定义 ==================== */
-#define MAX_PRODUCTS         5      // 商品种类数
+#define MAX_PRODUCTS         6      // 商品种类数
 #define MAX_CART_ITEMS       10     // 购物车最多商品项数
-#define MAX_TX_HISTORY       20     // 历史交易记录最大条数
+#define MAX_TX_HISTORY       30     // 历史交易记录最大条数
 #define MAX_TX_ITEMS_PER_TX  10     // 单笔交易最多明细项数
 #define TX_LOG_FILE          "0:/transactions.csv"
 
@@ -63,6 +63,10 @@ extern lv_obj_t * cart_list;
 extern lv_obj_t * input_ta;
 extern lv_obj_t * num_kb;
 extern lv_obj_t * label_full;               // 覆盖全屏的背景label（用于隐藏键盘等）
+
+/* ==================== 字体声明 ==================== */
+extern const lv_font_t ziti;                // 14px中文小字体
+extern const lv_font_t ziti_title;          // 18px中文标题字体
 
 /* ==================== 核心功能函数原型 ==================== */
 

@@ -28,7 +28,7 @@ extern lv_obj_t * label_full;
 
 // --- A. 点击商品卡片的回调 ---
 
-// 延时清空购物车的定时器回调
+// 延时清空购物车的定时器回调（repeat_count=1，LVGL 自动删除）
 static void clear_cart_timer_cb(lv_timer_t * timer)
 {
     if(cart_list != NULL) {
@@ -37,7 +37,6 @@ static void clear_cart_timer_cb(lv_timer_t * timer)
             lv_obj_del(lv_obj_get_child(cart_list, i));
         }
     }
-    lv_timer_del(timer); // 一次性定时器，自行删除
 }
 
 void product_btn_event_cb(lv_event_t * e)
@@ -59,6 +58,7 @@ void product_btn_event_cb(lv_event_t * e)
         lv_keyboard_set_textarea(num_kb, input_ta);
         lv_obj_clear_flag(input_ta, LV_OBJ_FLAG_HIDDEN);
         lv_obj_clear_flag(num_kb, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(label_full, LV_OBJ_FLAG_HIDDEN);
         lv_obj_move_foreground(label_full);
         lv_obj_move_foreground(num_kb);
         lv_obj_move_foreground(input_ta);
@@ -129,12 +129,14 @@ void kb_event_cb(lv_event_t * e)
         // 无论是否添加成功，都重置并隐藏输入界面
         lv_obj_add_flag(input_ta, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(num_kb, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(label_full, LV_OBJ_FLAG_HIDDEN);
         lv_textarea_set_text(input_ta, "");
 		lv_obj_move_background(label_full);
     }
     else if(code == LV_EVENT_CANCEL) {
         lv_obj_add_flag(input_ta, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(num_kb, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(label_full, LV_OBJ_FLAG_HIDDEN);
 		lv_obj_move_background(label_full);
     }
 }
@@ -247,14 +249,34 @@ void checkout_btn_event_cb(lv_event_t * e)
     // 保存交易记录到 RAM + SD 卡
     tx_log_add(&tx);
 
-		// 5. 准备结果字符串 (扩大缓冲区，容纳折扣信息)
-    static char result_buf[128];
+		// 5. 准备结果字符串 (包含商品明细 + 金额)
+    static char result_buf[512];
+    int offset = 0;
+
+    // 列出每个商品的明细
+    for(uint8_t k = 0; k < tx.item_count; k++) {
+        uint8_t pid = tx.items[k].product_id;
+        if(pid < MAX_PRODUCTS) {
+            offset += snprintf(result_buf + offset, sizeof(result_buf) - offset,
+                               "%s x%.1f %s = %.2f " CN_YUAN "\n",
+                               shop_products[pid].name,
+                               tx.items[k].quantity,
+                               shop_products[pid].unit,
+                               tx.items[k].subtotal);
+        }
+    }
+
+    // 分隔线
+    offset += snprintf(result_buf + offset, sizeof(result_buf) - offset,
+                       "------------------\n");
+
+    // 金额（有折扣时显示折前折后）
     if (grand_total != final_total) {
-        snprintf(result_buf, sizeof(result_buf),
+        snprintf(result_buf + offset, sizeof(result_buf) - offset,
                  CN_BEFORE_DISC ": %.2f " CN_YUAN "\n" CN_AFTER_DISC ": %.2f " CN_YUAN "%s",
                  grand_total, final_total, discount_desc);
     } else {
-        snprintf(result_buf, sizeof(result_buf),
+        snprintf(result_buf + offset, sizeof(result_buf) - offset,
                  CN_TOTAL ": %.2f " CN_YUAN, final_total);
     }
 
@@ -291,6 +313,7 @@ void label_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_CLICKED) {
+				lv_obj_add_flag(label_full, LV_OBJ_FLAG_HIDDEN);
 				lv_obj_add_flag(num_kb, LV_OBJ_FLAG_HIDDEN);
 				lv_obj_add_flag(input_ta, LV_OBJ_FLAG_HIDDEN);
 				lv_obj_move_background(label_full);
@@ -332,13 +355,9 @@ void cart_list_btn_event_cb(lv_event_t* e)
 }
 
 // ==================== 交易历史面板 ====================
-#define HIST_PAGE_SIZE  5   // 每页显示条数
 
 static lv_obj_t * hist_panel = NULL;    // 历史面板容器
-static lv_obj_t * hist_list  = NULL;    // 交易列表
-static lv_obj_t * hist_page_label = NULL; // 页码标签
-static int hist_current_page = 0;       // 当前页（0-based）
-static int hist_total_pages  = 1;       // 总页数
+static lv_obj_t * hist_list  = NULL;    // 交易列表（可滚动，显示全部记录）
 
 // 前向声明
 static void hist_list_item_cb(lv_event_t * e);
@@ -354,7 +373,7 @@ static const char * get_discount_desc_str(tx_discount_type_t type)
     }
 }
 
-/* 刷新历史列表（根据当前页码重绘） */
+/* 刷新历史列表（显示全部记录，最新在前） */
 static void refresh_history_list(void)
 {
     if(hist_list == NULL) return;
@@ -363,16 +382,6 @@ static void refresh_history_list(void)
     lv_obj_clean(hist_list);
 
     int total = (int)tx_log.count;
-    hist_total_pages = (total + HIST_PAGE_SIZE - 1) / HIST_PAGE_SIZE;
-    if(hist_total_pages < 1) hist_total_pages = 1;
-
-    // 边界修正
-    if(hist_current_page >= hist_total_pages) hist_current_page = hist_total_pages - 1;
-    if(hist_current_page < 0) hist_current_page = 0;
-
-    int start_idx = hist_current_page * HIST_PAGE_SIZE;
-    int end_idx = start_idx + HIST_PAGE_SIZE;
-    if(end_idx > total) end_idx = total;
 
     // 无记录提示
     if(total == 0) {
@@ -381,8 +390,8 @@ static void refresh_history_list(void)
         lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_width(lbl, lv_pct(100));
     } else {
-        // 倒序显示（最新在前）
-        for(int i = end_idx - 1; i >= start_idx; i--) {
+        // 倒序显示（最新在前），全部记录
+        for(int i = total - 1; i >= 0; i--) {
             transaction_t * tx = &tx_log.records[i];
 
             // 构建行文字: "#交易记录N | M项商品 | 实付: XX.XX 元"
@@ -403,14 +412,6 @@ static void refresh_history_list(void)
             lv_obj_add_event_cb(btn, hist_list_item_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)i);
         }
     }
-
-    // 更新页码文字
-    if(hist_page_label) {
-        static char page_buf[32];
-        snprintf(page_buf, sizeof(page_buf), CN_PAGE_FMT,
-                 hist_current_page + 1, hist_total_pages);
-        lv_label_set_text(hist_page_label, page_buf);
-    }
 }
 
 /* 关闭历史面板（同时删除遮罩层） */
@@ -421,35 +422,14 @@ static void close_history_panel(void)
         lv_obj_del(overlay);          // 删除遮罩层，它会连带删除子对象 hist_panel
         hist_panel = NULL;
         hist_list = NULL;
-        hist_page_label = NULL;
-        hist_current_page = 0;
     }
 }
 
-/* 关闭交易详情弹窗 */
+/* 关闭交易详情弹窗（删除遮罩层，连带删除其子对象 popup）*/
 static void close_detail_popup(lv_event_t * e)
 {
-    lv_obj_t * popup = (lv_obj_t *)lv_event_get_user_data(e);
-    if(popup) lv_obj_del(popup);
-}
-
-/* 翻页回调 */
-static void hist_prev_cb(lv_event_t * e)
-{
-    (void)e;
-    if(hist_current_page > 0) {
-        hist_current_page--;
-        refresh_history_list();
-    }
-}
-
-static void hist_next_cb(lv_event_t * e)
-{
-    (void)e;
-    if(hist_current_page < hist_total_pages - 1) {
-        hist_current_page++;
-        refresh_history_list();
-    }
+    lv_obj_t * overlay = (lv_obj_t *)lv_event_get_user_data(e);
+    if(overlay) lv_obj_del(overlay);
 }
 
 /* 关闭面板回调 */
@@ -497,7 +477,7 @@ static void hist_list_item_cb(lv_event_t * e)
     static char title_buf[48];
     snprintf(title_buf, sizeof(title_buf), "%s #%lu", CN_TX_DETAIL, (unsigned long)tx->id);
     lv_label_set_text(title_lbl, title_buf);
-    lv_obj_set_style_text_font(title_lbl, &lv_font_montserrat_14, 0);
+    lv_obj_set_style_text_font(title_lbl, &ziti_title, 0);
     lv_obj_set_style_text_color(title_lbl, lv_palette_main(LV_PALETTE_BLUE), 0);
 
     // 金额信息
@@ -519,10 +499,11 @@ static void hist_list_item_cb(lv_event_t * e)
     lv_label_set_text(money_lbl, money_buf);
     lv_obj_set_style_text_color(money_lbl, lv_palette_main(LV_PALETTE_RED), 0);
 
-    // 商品明细（可滚动）
+    // 商品明细（可滚动，列布局）
     lv_obj_t * items_cont = lv_obj_create(popup);
     lv_obj_set_width(items_cont, lv_pct(100));
     lv_obj_set_flex_grow(items_cont, 1);
+    lv_obj_set_flex_flow(items_cont, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_style_border_width(items_cont, 0, 0);
     lv_obj_set_style_bg_opa(items_cont, LV_OPA_TRANSP, 0);
     lv_obj_set_style_pad_gap(items_cont, 4, 0);
@@ -559,7 +540,6 @@ static void hist_clear_cb(lv_event_t * e)
 {
     (void)e;
     tx_log_clear();
-    hist_current_page = 0;
     refresh_history_list();
 }
 
@@ -590,7 +570,15 @@ void show_history_panel(void)
     lv_obj_set_style_pad_all(hist_panel, 15, 0);
     lv_obj_clear_flag(hist_panel, LV_OBJ_FLAG_SCROLLABLE);
 
-    // 顶部：标题 + 关闭按钮
+    // 主标题：交易明细（左对齐，醒目）
+    lv_obj_t * main_title = lv_label_create(hist_panel);
+    lv_label_set_text(main_title, CN_TX_DETAIL);
+    lv_obj_set_style_text_font(main_title, &ziti_title, 0);
+    lv_obj_set_style_text_color(main_title, lv_palette_main(LV_PALETTE_BLUE), 0);
+    lv_obj_set_width(main_title, lv_pct(100));
+    lv_obj_set_style_text_align(main_title, LV_TEXT_ALIGN_LEFT, 0);
+
+    // 顶部：关闭按钮（右上角）
     lv_obj_t * top_row = lv_obj_create(hist_panel);
     lv_obj_set_size(top_row, lv_pct(100), 40);
     lv_obj_set_style_border_width(top_row, 0, 0);
@@ -598,12 +586,7 @@ void show_history_panel(void)
     lv_obj_set_style_pad_all(top_row, 0, 0);
     lv_obj_clear_flag(top_row, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_t * title = lv_label_create(top_row);
-    lv_label_set_text(title, CN_HISTORY_TITLE);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_14, 0);
-    lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_BLUE), 0);
-    lv_obj_align(title, LV_ALIGN_LEFT_MID, 0, 0);
-
+    // 关闭按钮（右上角）
     lv_obj_t * close_btn = lv_btn_create(top_row);
     lv_obj_set_size(close_btn, 80, 32);
     lv_obj_align(close_btn, LV_ALIGN_RIGHT_MID, 0, 0);
@@ -613,13 +596,20 @@ void show_history_panel(void)
     lv_label_set_text(close_lbl, CN_CLOSE_BTN);
     lv_obj_center(close_lbl);
 
+    // 副标题：最多储存 N 条记录
+    static char max_buf[48];
+    snprintf(max_buf, sizeof(max_buf), CN_MAX_RECORDS, MAX_TX_HISTORY);
+    lv_obj_t * subtitle = lv_label_create(hist_panel);
+    lv_label_set_text(subtitle, max_buf);
+    lv_obj_set_style_text_color(subtitle, lv_palette_main(LV_PALETTE_GREY), 0);
+
     // 中部：交易列表（可滚动）
     hist_list = lv_list_create(hist_panel);
     lv_obj_set_width(hist_list, lv_pct(100));
     lv_obj_set_flex_grow(hist_list, 1);
     lv_obj_set_style_pad_gap(hist_list, 8, 0);
 
-    // 底部：翻页 + 清空
+    // 底部：清空记录按钮
     lv_obj_t * bottom_row = lv_obj_create(hist_panel);
     lv_obj_set_size(bottom_row, lv_pct(100), 45);
     lv_obj_set_style_border_width(bottom_row, 0, 0);
@@ -627,32 +617,9 @@ void show_history_panel(void)
     lv_obj_set_style_pad_all(bottom_row, 0, 0);
     lv_obj_clear_flag(bottom_row, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_obj_t * btn_prev = lv_btn_create(bottom_row);
-    lv_obj_set_size(btn_prev, 80, 36);
-    lv_obj_align(btn_prev, LV_ALIGN_LEFT_MID, 0, 0);
-    lv_obj_set_style_bg_color(btn_prev, lv_palette_main(LV_PALETTE_GREY), 0);
-    lv_obj_add_event_cb(btn_prev, hist_prev_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t * lbl_prev = lv_label_create(btn_prev);
-    lv_label_set_text(lbl_prev, CN_PAGE_PREV);
-    lv_obj_center(lbl_prev);
-
-    hist_page_label = lv_label_create(bottom_row);
-    lv_obj_align(hist_page_label, LV_ALIGN_CENTER, 0, 0);
-    lv_label_set_text(hist_page_label, "");
-
-    lv_obj_t * btn_next = lv_btn_create(bottom_row);
-    lv_obj_set_size(btn_next, 80, 36);
-    lv_obj_align(btn_next, LV_ALIGN_RIGHT_MID, 0, 0);
-    lv_obj_set_style_bg_color(btn_next, lv_palette_main(LV_PALETTE_GREY), 0);
-    lv_obj_add_event_cb(btn_next, hist_next_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t * lbl_next = lv_label_create(btn_next);
-    lv_label_set_text(lbl_next, CN_PAGE_NEXT);
-    lv_obj_center(lbl_next);
-
-    // 清空记录按钮
     lv_obj_t * btn_clr = lv_btn_create(bottom_row);
-    lv_obj_set_size(btn_clr, 90, 36);
-    lv_obj_align(btn_clr, LV_ALIGN_RIGHT_MID, -95, 0);
+    lv_obj_set_size(btn_clr, 120, 36);
+    lv_obj_align(btn_clr, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_style_bg_color(btn_clr, lv_palette_main(LV_PALETTE_RED), 0);
     lv_obj_add_event_cb(btn_clr, hist_clear_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t * lbl_clr = lv_label_create(btn_clr);
@@ -660,7 +627,6 @@ void show_history_panel(void)
     lv_obj_center(lbl_clr);
 
     // 首次加载数据
-    hist_current_page = 0;
     refresh_history_list();
 }
 

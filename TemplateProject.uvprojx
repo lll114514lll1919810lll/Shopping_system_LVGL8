@@ -1154,6 +1154,11 @@
               <FileType>1</FileType>
               <FilePath>.\lvgl\user_lv_font\ziti.c</FilePath>
             </File>
+            <File>
+              <FileName>ziti_title.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\lvgl\user_lv_font\ziti_title.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

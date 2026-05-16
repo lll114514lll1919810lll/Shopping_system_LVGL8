@@ -12,19 +12,20 @@ void * sdram_malloc(uint32_t size) {
 }
 
 // 商品数据定义
-product_t shop_products[5] = {
+product_t shop_products[MAX_PRODUCTS] = {
     {0, CN_APPLE,      8,  "kg",        "0:/apple.bin"},
     {1, CN_MILK,       6,  CN_BOX,      "0:/milk.bin"},
     {2, CN_BREAD,      12, CN_PACK,     "0:/bread.bin"},
     {3, CN_WATERMELON, 3,  "kg",        "0:/xigua.bin"},
-    {4, CN_COLA,       3,  CN_BOTTLE,   "0:/cola.bin"}
+    {4, CN_COLA,       3,  CN_BOTTLE,   "0:/cola.bin"},
+    {5, CN_CHOCOLATE,  40, CN_BOX,      "0:/chocolate.bin"}
 };
 
 lv_obj_t * cart_list = NULL;
 lv_obj_t * input_ta = NULL;
 lv_obj_t * num_kb = NULL;
 lv_obj_t * label_full = NULL;
-static lv_img_dsc_t img_dscs[5]; // 存储图片描述符
+static lv_img_dsc_t img_dscs[MAX_PRODUCTS]; // 存储图片描述符
 
 void shop_ui_init(void)
 {
@@ -40,7 +41,7 @@ void shop_ui_init(void)
     lv_obj_set_style_pad_gap(product_panel, 15, 0);
 
     // 2. 循环加载图片并生成卡片
-    for(int i = 0; i < 5; i++) {
+    for(int i = 0; i < MAX_PRODUCTS; i++) {
         // 分配并读取 SD 卡图片到 SDRAM
         uint8_t * image_buffer = (uint8_t *)sdram_malloc(img_size_with_header);
         read_file_to_array(shop_products[i].img_path, image_buffer, img_size_with_header);
@@ -55,8 +56,10 @@ void shop_ui_init(void)
 
         // 创建卡片容器
         lv_obj_t * item_cont = lv_obj_create(product_panel);
-        lv_obj_set_size(item_cont, 210, 300); 
+        lv_obj_set_size(item_cont, 220, 280); 
         lv_obj_clear_flag(item_cont, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_style_pad_all(item_cont, 2, 0);
+        lv_obj_set_style_pad_top(item_cont, 0, 0);
 
         // 创建图片
         lv_obj_t * img = lv_img_create(item_cont);
@@ -64,15 +67,22 @@ void shop_ui_init(void)
         lv_obj_align(img, LV_ALIGN_TOP_MID, 0, 0);
         lv_obj_clear_flag(img, LV_OBJ_FLAG_CLICKABLE);
 
-        // 创建文字标签
-        lv_obj_t * label = lv_label_create(item_cont);
-        lv_label_set_text_fmt(label, "%s\n#ff0000 %d " CN_YUAN "# / %s", 
-                              shop_products[i].name, 
-                              shop_products[i].price, 
+        // 创建商品名标签（大字体）
+        lv_obj_t * name_label = lv_label_create(item_cont);
+        lv_label_set_text(name_label, shop_products[i].name);
+        lv_obj_set_style_text_font(name_label, &ziti_title, 0);
+        lv_obj_align(name_label, LV_ALIGN_TOP_MID, 0, 208);
+        lv_obj_set_style_text_align(name_label, LV_TEXT_ALIGN_CENTER, 0);
+
+        // 创建价格标签（小字体）
+        lv_obj_t * price_label = lv_label_create(item_cont);
+        lv_label_set_text_fmt(price_label, "#ff0000 %d " CN_YUAN "# / %s",
+                              shop_products[i].price,
                               shop_products[i].unit);
-        lv_label_set_recolor(label, true); 
-        lv_obj_align(label, LV_ALIGN_BOTTOM_MID, 0, -10);
-        lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
+        lv_label_set_recolor(price_label, true);
+        lv_obj_set_style_text_font(price_label, &ziti, 0);
+        lv_obj_align(price_label, LV_ALIGN_TOP_MID, 0, 245);
+        lv_obj_set_style_text_align(price_label, LV_TEXT_ALIGN_CENTER, 0);
 
         // 绑定事件
         lv_obj_add_flag(item_cont, LV_OBJ_FLAG_CLICKABLE);
@@ -89,6 +99,7 @@ void shop_ui_init(void)
     // 标题
     lv_obj_t * cart_title = lv_label_create(cart_list);
     lv_label_set_text(cart_title, CN_CART_TITLE);
+    lv_obj_set_style_text_font(cart_title, &ziti_title, 0);
     lv_obj_set_style_text_align(cart_title, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_width(cart_title, lv_pct(100));
 
@@ -104,12 +115,15 @@ void shop_ui_init(void)
     lv_obj_add_flag(num_kb, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_event_cb(num_kb, kb_event_cb, LV_EVENT_ALL, NULL); 
 
-		label_full = lv_label_create(scr);
-		lv_label_set_text(label_full, "");
-		lv_obj_set_size(label_full, 1024, 600);
-		lv_obj_move_background(label_full);
-		lv_obj_add_flag(label_full, LV_OBJ_FLAG_CLICKABLE);
-		lv_obj_add_event_cb(label_full, label_event_cb, LV_EVENT_CLICKED, NULL);
+    label_full = lv_label_create(scr);
+    lv_label_set_text(label_full, "");
+    lv_obj_set_size(label_full, 1024, 600);
+    lv_obj_move_background(label_full);
+    lv_obj_add_flag(label_full, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(label_full, LV_OBJ_FLAG_HIDDEN);  // 默认隐藏
+    lv_obj_add_event_cb(label_full, label_event_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_set_style_bg_color(label_full, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(label_full, LV_OPA_60, 0);
 
     // 5. 底部控制按钮
     lv_obj_t * btn_checkout = lv_btn_create(scr);
@@ -133,14 +147,14 @@ void shop_ui_init(void)
     // 5b. 交易记录按钮
     lv_obj_t * btn_history = lv_btn_create(scr);
     lv_obj_set_size(btn_history, 110, 50);
-    lv_obj_set_pos(btn_history, 540, 475);
+    lv_obj_set_pos(btn_history, 900, 530);
     lv_obj_set_style_bg_color(btn_history, lv_palette_main(LV_PALETTE_BLUE), 0);
     lv_obj_add_event_cb(btn_history, history_btn_event_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t * lbl_history = lv_label_create(btn_history);
     lv_label_set_text(lbl_history, CN_HISTORY);
     lv_obj_center(lbl_history);
 
-		//6.优惠
+    //6.优惠
 		lv_obj_t * discount_panel = lv_obj_create(scr);
 		lv_obj_set_size(discount_panel, 220, 450);
 		lv_obj_set_pos(discount_panel, 790, 10);
@@ -151,6 +165,7 @@ void shop_ui_init(void)
 			// 标题
 		lv_obj_t * discount_title = lv_label_create(discount_panel);
 		lv_label_set_text(discount_title, CN_DISCOUNTS);
+		lv_obj_set_style_text_font(discount_title, &ziti_title, 0);
 		lv_obj_set_style_text_align(discount_title, LV_TEXT_ALIGN_CENTER, 0);
 		lv_obj_set_width(discount_title, lv_pct(100));
 
