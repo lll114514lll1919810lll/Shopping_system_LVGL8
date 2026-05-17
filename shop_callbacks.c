@@ -13,15 +13,8 @@ typedef enum {
 // 键盘输入模式枚举（决定确认后执行什么行为）
 // 定义在 shop_app.h 中，此处不再重复
 
-// 获取当前选中的优惠（供结算使用）
-discount_type_t get_current_discount(void);
-
 static discount_type_t current_discount = DISCOUNT_NONE;
 kb_input_mode_t current_kb_mode = KB_MODE_NONE;  // 当前键盘输入模式（外部可访问）
-
-discount_type_t get_current_discount(void) {
-    return current_discount;
-}
 
 // 记录当前点击的是哪个商品，用于键盘确认时计算
 static product_t * current_product = NULL;
@@ -140,39 +133,6 @@ static input_result_t validate_and_parse_input(const char * input_str, const pro
     return result;
 }
 
-/* 在购物车中查找指定商品的按钮项 */
-static lv_obj_t * find_cart_item_by_name(const char * product_name)
-{
-    if(cart_list == NULL || product_name == NULL) return NULL;
-    
-    uint32_t child_cnt = lv_obj_get_child_cnt(cart_list);
-    for(uint32_t i = 0; i < child_cnt; i++) {
-        lv_obj_t * child = lv_obj_get_child(cart_list, i);
-        const char * text = lv_list_get_btn_text(cart_list, child);
-        
-        if(text && strncmp(text, product_name, strlen(product_name)) == 0) {
-            return child;
-        }
-    }
-    return NULL;
-}
-
-/* 添加或更新购物车项 */
-static void add_or_update_cart_item(const char * item_text, const char * product_name)
-{
-    if(cart_list == NULL || item_text == NULL || product_name == NULL) return;
-    
-    // 查找是否已存在
-    lv_obj_t * existing_btn = find_cart_item_by_name(product_name);
-    if(existing_btn != NULL) {
-        lv_obj_del(existing_btn);
-    }
-    
-    // 添加新项
-    lv_obj_t * btn = lv_list_add_btn(cart_list, LV_SYMBOL_OK, item_text);
-    lv_obj_add_event_cb(btn, cart_list_btn_event_cb, LV_EVENT_CLICKED, NULL);
-}
-
 /* 隐藏输入界面并重置状态 */
 void hide_input_ui(void)
 {
@@ -188,13 +148,6 @@ void hide_input_ui(void)
         lv_obj_move_background(label_full);
     }
     current_kb_mode = KB_MODE_NONE;  // 重置输入模式
-}
-
-/* 显示错误提示 */
-static void show_error_message(const char * title, const char * message)
-{
-    lv_obj_t * mbox = lv_msgbox_create(NULL, title, message, NULL, true);
-    lv_obj_center(mbox);
 }
 
 // ========== 键盘确认后的模式处理函数 ==========
@@ -214,10 +167,10 @@ static void kb_mode_add_to_cart_handler(const char * input_str)
         // 根据错误类型显示不同提示
         switch(result.error) {
             case INPUT_ERR_DECIMAL:
-                show_error_message(CN_ERROR, CN_INT_ONLY);
+                shop_ui_show_msgbox(CN_ERROR, CN_INT_ONLY, NULL);
                 break;
             case INPUT_ERR_NON_POSITIVE:
-                show_error_message(CN_ERROR, CN_QTY_POSITIVE);
+                shop_ui_show_msgbox(CN_ERROR, CN_QTY_POSITIVE, NULL);
                 break;
             default:
                 break;
@@ -227,7 +180,7 @@ static void kb_mode_add_to_cart_handler(const char * input_str)
     }
 
     // 添加到购物车
-    add_or_update_cart_item(result.item_text, current_product->name);
+    shop_ui_add_cart_item(result.item_text, current_product->name);
     hide_input_ui();
 }
 
@@ -245,10 +198,10 @@ static void kb_mode_edit_quantity_handler(const char * input_str)
     if(!result.is_valid) {
         switch(result.error) {
             case INPUT_ERR_DECIMAL:
-                show_error_message(CN_ERROR, CN_INT_ONLY);
+                shop_ui_show_msgbox(CN_ERROR, CN_INT_ONLY, NULL);
                 break;
             case INPUT_ERR_NON_POSITIVE:
-                show_error_message(CN_ERROR, CN_QTY_POSITIVE);
+                shop_ui_show_msgbox(CN_ERROR, CN_QTY_POSITIVE, NULL);
                 break;
             default:
                 break;
@@ -257,15 +210,8 @@ static void kb_mode_edit_quantity_handler(const char * input_str)
         return;
     }
 
-    // 根据商品名查找购物车中的项
-    lv_obj_t * existing_btn = find_cart_item_by_name(current_product->name);
-    if(existing_btn != NULL) {
-        lv_obj_del(existing_btn);
-    }
-
-    // 添加新的购物车项
-    lv_obj_t * btn = lv_list_add_btn(cart_list, LV_SYMBOL_OK, result.item_text);
-    lv_obj_add_event_cb(btn, cart_list_btn_event_cb, LV_EVENT_CLICKED, NULL);
+    // 更新购物车中的商品项
+    shop_ui_add_cart_item(result.item_text, current_product->name);
 
     hide_input_ui();
 }
@@ -320,10 +266,7 @@ void checkout_btn_event_cb(lv_event_t * e)
 
     // 1. 检查购物车是否为空（child_cnt <= 1 表示只有标题行或空列表）
     if(child_cnt <= 1) {
-        lv_obj_t * mbox = lv_msgbox_create(NULL, CN_HINT, CN_CART_EMPTY, NULL, true);
-        lv_obj_t * title_lbl = lv_msgbox_get_title(mbox);
-        if(title_lbl) lv_obj_set_style_text_font(title_lbl, &ziti_title, 0);
-        lv_obj_center(mbox);
+        shop_ui_show_msgbox(CN_HINT, CN_CART_EMPTY, NULL);
         return;
     }
 
@@ -342,10 +285,7 @@ void checkout_btn_event_cb(lv_event_t * e)
 
     // 3. 总价为0时提示购物车为空
     if(grand_total == 0) {
-        lv_obj_t * mbox = lv_msgbox_create(NULL, CN_HINT, CN_CART_EMPTY, NULL, true);
-        lv_obj_t * title_lbl = lv_msgbox_get_title(mbox);
-        if(title_lbl) lv_obj_set_style_text_font(title_lbl, &ziti_title, 0);
-        lv_obj_center(mbox);
+        shop_ui_show_msgbox(CN_HINT, CN_CART_EMPTY, NULL);
         return;
     }
 
@@ -433,53 +373,10 @@ void checkout_btn_event_cb(lv_event_t * e)
     // 保存交易记录到 RAM + SD 卡
     tx_log_add(&tx);
 
-		// 5. 准备结果字符串 (包含商品明细 + 金额)
-    static char result_buf[512];
-    int offset = 0;
+		// 5. 显示结算结果弹窗
+    shop_ui_show_checkout_result(&tx, grand_total, final_total, discount_desc);
 
-    // 列出每个商品的明细
-    for(uint8_t k = 0; k < tx.item_count; k++) {
-        uint8_t pid = tx.items[k].product_id;
-        if(pid < MAX_PRODUCTS) {
-            offset += snprintf(result_buf + offset, sizeof(result_buf) - offset,
-                               "%s x%.1f %s = %.2f " CN_YUAN "\n",
-                               shop_products[pid].name,
-                               tx.items[k].quantity,
-                               shop_products[pid].unit,
-                               tx.items[k].subtotal);
-        }
-    }
-
-    // 分隔线
-    offset += snprintf(result_buf + offset, sizeof(result_buf) - offset,
-                       "------------------\n");
-
-    // 金额（有折扣时显示折前折后）
-    if (grand_total != final_total) {
-        snprintf(result_buf + offset, sizeof(result_buf) - offset,
-                 CN_BEFORE_DISC ": %.2f " CN_YUAN "\n" CN_AFTER_DISC ": %.2f " CN_YUAN "%s",
-                 grand_total, final_total, discount_desc);
-    } else {
-        snprintf(result_buf + offset, sizeof(result_buf) - offset,
-                 CN_TOTAL ": %.2f " CN_YUAN, final_total);
-    }
-
-    // 6. 创建弹窗
-    lv_obj_t * mbox = lv_msgbox_create(NULL, CN_SUCCESS, result_buf, NULL, true);
-    if(mbox) {
-        lv_obj_center(mbox);
-        lv_obj_t * mbox_txt = lv_msgbox_get_text(mbox);
-        if(mbox_txt) {
-            lv_obj_set_style_text_color(mbox_txt, lv_palette_main(LV_PALETTE_RED), 0);
-        }
-        // 设置标题字体为ziti_title
-        lv_obj_t * title_lbl = lv_msgbox_get_title(mbox);
-        if(title_lbl) {
-            lv_obj_set_style_text_font(title_lbl, &ziti_title, 0);
-        }
-    }
-
-    // 7. 延时0.5秒后清空购物车（保留标题）
+    // 6. 延时0.5秒后清空购物车（保留标题）
     lv_timer_t * t = lv_timer_create(clear_cart_timer_cb, 500, NULL);
     lv_timer_set_repeat_count(t, 1);
 }
@@ -558,9 +455,7 @@ void cart_list_btn_event_cb(lv_event_t* e)
         }
 
         // 创建操作选择弹窗（使用 btnmatrix），标题栏右侧带关闭按钮
-        static const char * action_btns[] = {CN_DELETE_ITEM, CN_EDIT_QTY, ""};
-        lv_obj_t * mbox = lv_msgbox_create(NULL, CN_CART_ACTION, NULL, action_btns, true);
-        lv_obj_center(mbox);
+        lv_obj_t * mbox = shop_ui_show_cart_action_menu();
 
         /* 获取消息框内部的按钮矩阵，并为其添加事件回调。
          * 回调通过 user_data 传入被操作的列表按钮（btn），
@@ -571,37 +466,6 @@ void cart_list_btn_event_cb(lv_event_t* e)
             lv_obj_add_event_cb(btnm, cart_action_btnmatrix_cb, LV_EVENT_VALUE_CHANGED, btn);
         }
     }
-}
-
-/* 操作菜单 - 删除按钮回调 */
-static void cart_item_delete_cb(lv_event_t * e)
-{
-    lv_obj_t * btn = (lv_obj_t *)lv_event_get_user_data(e);
-    if(btn != NULL) {
-        lv_obj_del(btn);
-    }
-    // 关闭弹窗（点击弹窗外部或按钮后 msgbox 自动关闭）
-}
-
-/* 操作菜单 - 修改数量按钮回调 */
-static void cart_item_edit_qty_cb(lv_event_t * e)
-{
-    product_t * p = (product_t *)lv_event_get_user_data(e);
-    if(p == NULL || input_ta == NULL || num_kb == NULL) return;
-
-    current_product = p;
-
-    // 设置输入模式为修改数量
-    current_kb_mode = KB_MODE_EDIT_QUANTITY;
-
-    // 动态设置文本框提示语
-    static char prompt_str[96];
-    snprintf(prompt_str, sizeof(prompt_str), "%s%s%s",
-             CN_NEW_QTY_PREFIX, p->name, CN_NEW_QTY_MID);
-    lv_textarea_set_placeholder_text(input_ta, prompt_str);
-
-    // 显示输入界面
-    show_input_ui();
 }
 
 /* 按钮矩阵事件回调：处理购物车操作（删除 / 修改数量） */
@@ -647,282 +511,6 @@ static void cart_action_btnmatrix_cb(lv_event_t * e)
 }
 
 // ==================== 交易历史面板 ====================
-
-static lv_obj_t * hist_panel = NULL;    // 历史面板容器
-static lv_obj_t * hist_list  = NULL;    // 交易列表（可滚动，显示全部记录）
-
-// 前向声明
-static void hist_list_item_cb(lv_event_t * e);
-static void refresh_history_list(void);
-
-/* 获取折扣描述文字 */
-static const char * get_discount_desc_str(tx_discount_type_t type)
-{
-    switch(type) {
-        case TX_DISC_FULL_REDUCTION: return CN_DESC_DISC_FULL20;
-        case TX_DISC_PERCENT_OFF:    return CN_DESC_DISC_90PCT;
-        case TX_DISC_FULL_100_80PCT: return CN_DESC_DISC_FULL100_80PCT;
-        case TX_DISC_FULL_200_50:    return CN_DESC_DISC_FULL200_RED50;
-        default:                     return CN_DESC_DISC_NONE;
-    }
-}
-
-/* 刷新历史列表（显示全部记录，最新在前） */
-static void refresh_history_list(void)
-{
-    if(hist_list == NULL) return;
-
-    // 清空列表
-    lv_obj_clean(hist_list);
-
-    int total = (int)tx_log.count;
-
-    // 无记录提示
-    if(total == 0) {
-        lv_obj_t * lbl = lv_label_create(hist_list);
-        lv_label_set_text(lbl, CN_TX_EMPTY);
-        lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
-        lv_obj_set_width(lbl, lv_pct(100));
-    } else {
-        // 倒序显示（最新在前），全部记录
-        for(int i = total - 1; i >= 0; i--) {
-            transaction_t * tx = &tx_log.records[i];
-
-            // 构建行文字: "#交易记录N | M项商品 | 实付: XX.XX 元"
-            static char line_buf[128];
-            if(tx->total_before_discount != tx->total_after_discount) {
-                snprintf(line_buf, sizeof(line_buf),
-                         "%s%lu | %d " CN_TX_ITEMS " | " CN_TX_PAY ": %.2f " CN_YUAN,
-                         CN_TX_ID, (unsigned long)tx->id, (int)tx->item_count,
-                         tx->total_after_discount);
-            } else {
-                snprintf(line_buf, sizeof(line_buf),
-                         "%s%lu | %d " CN_TX_ITEMS " | " CN_TX_TOTAL ": %.2f " CN_YUAN,
-                         CN_TX_ID, (unsigned long)tx->id, (int)tx->item_count,
-                         tx->total_after_discount);
-            }
-
-            lv_obj_t * btn = lv_list_add_btn(hist_list, LV_SYMBOL_FILE, line_buf);
-            lv_obj_add_event_cb(btn, hist_list_item_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)i);
-        }
-    }
-}
-
-/* 关闭历史面板（同时删除遮罩层） */
-static void close_history_panel(void)
-{
-    if(hist_panel) {
-        lv_obj_t * overlay = lv_obj_get_parent(hist_panel);
-        lv_obj_del(overlay);          // 删除遮罩层，它会连带删除子对象 hist_panel
-        hist_panel = NULL;
-        hist_list = NULL;
-    }
-}
-
-/* 关闭交易详情弹窗（删除遮罩层，连带删除其子对象 popup）*/
-static void close_detail_popup(lv_event_t * e)
-{
-    lv_obj_t * overlay = (lv_obj_t *)lv_event_get_user_data(e);
-    if(overlay) lv_obj_del(overlay);
-}
-
-/* 关闭面板回调 */
-static void hist_close_cb(lv_event_t * e)
-{
-    (void)e;
-    close_history_panel();
-}
-
-/* 点击交易行 → 显示详情弹窗 */
-static void hist_list_item_cb(lv_event_t * e)
-{
-    lv_obj_t * btn = lv_event_get_target(e);
-    int idx = (int)(uintptr_t)lv_event_get_user_data(e);
-
-    if(idx < 0 || idx >= (int)tx_log.count) return;
-    transaction_t * tx = &tx_log.records[idx];
-
-    // 创建全屏半透明遮罩
-    lv_obj_t * overlay = lv_obj_create(lv_scr_act());
-    lv_obj_set_size(overlay, 1024, 600);
-    lv_obj_set_pos(overlay, 0, 0);
-    lv_obj_set_style_bg_color(overlay, lv_color_black(), 0);
-    lv_obj_set_style_bg_opa(overlay, LV_OPA_60, 0);
-    lv_obj_clear_flag(overlay, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_event_cb(overlay, close_detail_popup, LV_EVENT_CLICKED, overlay);
-
-    // 详情弹窗
-    lv_obj_t * popup = lv_obj_create(overlay);
-    lv_obj_set_size(popup, 500, 450);
-    lv_obj_center(popup);
-    lv_obj_set_style_bg_color(popup, lv_color_white(), 0);
-    lv_obj_set_style_bg_opa(popup, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(popup, 2, 0);
-    lv_obj_set_style_border_color(popup, lv_palette_main(LV_PALETTE_BLUE), 0);
-    lv_obj_set_style_radius(popup, 10, 0);
-    lv_obj_set_flex_flow(popup, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_gap(popup, 6, 0);
-    lv_obj_set_style_pad_all(popup, 15, 0);
-    lv_obj_clear_flag(popup, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(popup, LV_OBJ_FLAG_CLICKABLE); // 阻止点击穿透到遮罩
-
-    // 标题
-    lv_obj_t * title_lbl = lv_label_create(popup);
-    static char title_buf[48];
-    snprintf(title_buf, sizeof(title_buf), "%s #%lu", CN_TX_DETAIL, (unsigned long)tx->id);
-    lv_label_set_text(title_lbl, title_buf);
-    lv_obj_set_style_text_font(title_lbl, &ziti_title, 0);
-    lv_obj_set_style_text_color(title_lbl, lv_palette_main(LV_PALETTE_BLUE), 0);
-
-    // 金额信息
-    lv_obj_t * money_lbl = lv_label_create(popup);
-    static char money_buf[256];
-    const char * disc_str = get_discount_desc_str(tx->discount_type);
-    if(tx->total_before_discount != tx->total_after_discount) {
-        snprintf(money_buf, sizeof(money_buf),
-                 CN_BEFORE_DISC ": %.2f " CN_YUAN "\n"
-                 CN_AFTER_DISC  ": %.2f " CN_YUAN "%s\n"
-                 CN_TX_DISC_FMT,
-                 tx->total_before_discount, tx->total_after_discount,
-                 disc_str, disc_str);
-    } else {
-        snprintf(money_buf, sizeof(money_buf),
-                 CN_TOTAL ": %.2f " CN_YUAN "\n" CN_DISC_NONE,
-                 tx->total_after_discount);
-    }
-    lv_label_set_text(money_lbl, money_buf);
-    lv_obj_set_style_text_color(money_lbl, lv_palette_main(LV_PALETTE_RED), 0);
-
-    // 商品明细（可滚动，列布局）
-    lv_obj_t * items_cont = lv_obj_create(popup);
-    lv_obj_set_width(items_cont, lv_pct(100));
-    lv_obj_set_flex_grow(items_cont, 1);
-    lv_obj_set_flex_flow(items_cont, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_border_width(items_cont, 0, 0);
-    lv_obj_set_style_bg_opa(items_cont, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_pad_gap(items_cont, 4, 0);
-    lv_obj_set_style_pad_all(items_cont, 0, 0);
-
-    for(uint8_t j = 0; j < tx->item_count; j++) {
-        uint8_t pid = tx->items[j].product_id;
-        if(pid < MAX_PRODUCTS) {
-            static char item_buf[96];
-            snprintf(item_buf, sizeof(item_buf),
-                     "%s " CN_QTY_X "%.1f %s = %.2f " CN_YUAN,
-                     shop_products[pid].name,
-                     tx->items[j].quantity,
-                     shop_products[pid].unit,
-                     tx->items[j].subtotal);
-
-            lv_obj_t * item_lbl = lv_label_create(items_cont);
-            lv_label_set_text(item_lbl, item_buf);
-        }
-    }
-
-    // 确定/关闭按钮
-    lv_obj_t * close_btn = lv_btn_create(popup);
-    lv_obj_set_size(close_btn, lv_pct(60), 40);
-    lv_obj_set_style_bg_color(close_btn, lv_palette_main(LV_PALETTE_BLUE), 0);
-    lv_obj_add_event_cb(close_btn, close_detail_popup, LV_EVENT_CLICKED, overlay);
-    lv_obj_t * close_lbl = lv_label_create(close_btn);
-    lv_label_set_text(close_lbl, CN_OK);
-    lv_obj_center(close_lbl);
-}
-
-/* 清空交易记录回调 */
-static void hist_clear_cb(lv_event_t * e)
-{
-    (void)e;
-    tx_log_clear();
-    refresh_history_list();
-}
-
-/* 显示交易历史面板（全屏遮罩） */
-void show_history_panel(void)
-{
-    // 避免重复打开
-    if(hist_panel) return;
-
-    // 全屏遮罩
-    lv_obj_t * overlay = lv_obj_create(lv_scr_act());
-    lv_obj_set_size(overlay, 1024, 600);
-    lv_obj_set_pos(overlay, 0, 0);
-    lv_obj_set_style_bg_color(overlay, lv_color_black(), 0);
-    lv_obj_set_style_bg_opa(overlay, LV_OPA_50, 0);
-    lv_obj_clear_flag(overlay, LV_OBJ_FLAG_SCROLLABLE);
-
-    hist_panel = lv_obj_create(overlay);
-    lv_obj_set_size(hist_panel, 600, 520);
-    lv_obj_center(hist_panel);
-    lv_obj_set_style_bg_color(hist_panel, lv_color_white(), 0);
-    lv_obj_set_style_bg_opa(hist_panel, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(hist_panel, 2, 0);
-    lv_obj_set_style_border_color(hist_panel, lv_palette_main(LV_PALETTE_BLUE), 0);
-    lv_obj_set_style_radius(hist_panel, 10, 0);
-    lv_obj_set_flex_flow(hist_panel, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_gap(hist_panel, 8, 0);
-    lv_obj_set_style_pad_all(hist_panel, 15, 0);
-    lv_obj_clear_flag(hist_panel, LV_OBJ_FLAG_SCROLLABLE);
-
-    // 主标题：交易明细（左对齐，醒目）
-    lv_obj_t * main_title = lv_label_create(hist_panel);
-    lv_label_set_text(main_title, CN_TX_DETAIL);
-    lv_obj_set_style_text_font(main_title, &ziti_title, 0);
-    lv_obj_set_style_text_color(main_title, lv_palette_main(LV_PALETTE_BLUE), 0);
-    lv_obj_set_width(main_title, lv_pct(100));
-    lv_obj_set_style_text_align(main_title, LV_TEXT_ALIGN_LEFT, 0);
-
-    // 顶部：关闭按钮（右上角）
-    lv_obj_t * top_row = lv_obj_create(hist_panel);
-    lv_obj_set_size(top_row, lv_pct(100), 40);
-    lv_obj_set_style_border_width(top_row, 0, 0);
-    lv_obj_set_style_bg_opa(top_row, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_pad_all(top_row, 0, 0);
-    lv_obj_clear_flag(top_row, LV_OBJ_FLAG_SCROLLABLE);
-
-    // 关闭按钮（右上角）
-    lv_obj_t * close_btn = lv_btn_create(top_row);
-    lv_obj_set_size(close_btn, 80, 32);
-    lv_obj_align(close_btn, LV_ALIGN_RIGHT_MID, 0, 0);
-    lv_obj_set_style_bg_color(close_btn, lv_palette_main(LV_PALETTE_RED), 0);
-    lv_obj_add_event_cb(close_btn, hist_close_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t * close_lbl = lv_label_create(close_btn);
-    lv_label_set_text(close_lbl, CN_CLOSE_BTN);
-    lv_obj_center(close_lbl);
-
-    // 副标题：最多储存 N 条记录
-    static char max_buf[48];
-    snprintf(max_buf, sizeof(max_buf), CN_MAX_RECORDS, MAX_TX_HISTORY);
-    lv_obj_t * subtitle = lv_label_create(hist_panel);
-    lv_label_set_text(subtitle, max_buf);
-    lv_obj_set_style_text_color(subtitle, lv_palette_main(LV_PALETTE_GREY), 0);
-
-    // 中部：交易列表（可滚动）
-    hist_list = lv_list_create(hist_panel);
-    lv_obj_set_width(hist_list, lv_pct(100));
-    lv_obj_set_flex_grow(hist_list, 1);
-    lv_obj_set_style_pad_gap(hist_list, 8, 0);
-
-    // 底部：清空记录按钮
-    lv_obj_t * bottom_row = lv_obj_create(hist_panel);
-    lv_obj_set_size(bottom_row, lv_pct(100), 45);
-    lv_obj_set_style_border_width(bottom_row, 0, 0);
-    lv_obj_set_style_bg_opa(bottom_row, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_pad_all(bottom_row, 0, 0);
-    lv_obj_clear_flag(bottom_row, LV_OBJ_FLAG_SCROLLABLE);
-
-    lv_obj_t * btn_clr = lv_btn_create(bottom_row);
-    lv_obj_set_size(btn_clr, 120, 36);
-    lv_obj_align(btn_clr, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_style_bg_color(btn_clr, lv_palette_main(LV_PALETTE_RED), 0);
-    lv_obj_add_event_cb(btn_clr, hist_clear_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t * lbl_clr = lv_label_create(btn_clr);
-    lv_label_set_text(lbl_clr, CN_HISTORY_CLR);
-    lv_obj_center(lbl_clr);
-
-    // 首次加载数据
-    refresh_history_list();
-}
 
 /* 交易记录按钮回调 */
 void history_btn_event_cb(lv_event_t * e)

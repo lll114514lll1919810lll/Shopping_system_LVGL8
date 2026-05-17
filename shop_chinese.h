@@ -44,7 +44,7 @@
 #define CN_SUCCESS    "\xe6\x88\x90\xe5\x8a\x9f"              // 成功
 #define CN_CART_EMPTY "\xe8\xb4\xad\xe7\x89\xa9\xe8\xbd\xa6\xe4\xb8\xba\xe7\xa9\xba" "!"   // 购物车为空!
 #define CN_INT_ONLY   "\xe6\xad\xa4\xe5\x95\x86\xe5\x93\x81\xe5\xbf\x85\xe9\xa1\xbb\xe4\xb8\xba\xe6\x95\xb4\xe6\x95\xb0\xe6\x95\xb0\xe9\x87\x8f"  // 此商品必须为整数数量
-#define CN_QTY_POSITIVE "\xe6\x95\xb0\xe9\x87\x8f\xe5\xbf\x85\xe9\xa1\xbb\xe5\xa4\xa7\xe4\xba\x8e0"  // 数量必须大于0
+#define CN_QTY_POSITIVE "\xe6\x95\xb0\xe9\x87\x8f\xe5\xbf\x85\xe9\xa1\xbb\xe5\xa4\xa7\xe4\xba\x8e" "0"  // 数量必须大于0
 
 // 购物车操作
 #define CN_CART_TITLE "\xe8\xb4\xad\xe7\x89\xa9\xe8\xbd\xa6 (\xe7\x82\xb9\xe5\x87\xbb\xe4\xbf\xae\xe6\x94\xb9)"  // 购物车 (点击修改)
@@ -62,7 +62,7 @@
 #define CN_DESC_DISC_90PCT         " (9" "\xe6\x8a\x98" ")"                                        //  (9折)
 #define CN_DESC_DISC_FULL100_80PCT " (\xe6\xbb\xa1" "100" "\xe6\x89\x93" "8" "\xe6\x8a\x98" ")"    //  (满100打8折)
 #define CN_DESC_DISC_FULL200_RED50 " (\xe6\xbb\xa1" "200" "\xe5\x87\x8f" "50" ")"                  //  (满200减50)
-#define CN_DESC_DISC_NONE          ""                                                              // (无折扣时不显示)
+#define CN_DESC_DISC_NONE          ""                                                              // // (无折扣时不显示)
 
 // 交易记录界面
 #define CN_HISTORY     "\xe4\xba\xa4\xe6\x98\x93\xe8\xae\xb0\xe5\xbd\x95"  // 交易记录

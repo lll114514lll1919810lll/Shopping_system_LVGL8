@@ -113,4 +113,13 @@ void history_btn_event_cb(lv_event_t * e);                  // 交易记录按钮回调
 extern void * sdram_malloc(uint32_t size);
 extern void read_file_to_array(const char *filename, void *array, uint32_t size);
 
+/* ==================== UI 辅助函数 ==================== */
+lv_obj_t * shop_ui_show_msgbox(const char * title, const char * message, const lv_color_t * txt_color);
+void shop_ui_add_cart_item(const char * item_text, const char * product_name);
+void shop_ui_show_checkout_result(const transaction_t * tx, float grand_total, float final_total, const char * discount_desc);
+lv_obj_t * shop_ui_show_cart_action_menu(void);
+void shop_ui_close_history_panel(void);
+void shop_ui_refresh_history_list(void);
+void shop_ui_show_tx_detail(transaction_t * tx);
+
 #endif
