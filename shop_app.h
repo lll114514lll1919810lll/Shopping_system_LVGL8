@@ -34,8 +34,10 @@ typedef struct {
 // 3. 优惠类型枚举（用于交易记录保存）
 typedef enum {
     TX_DISC_NONE = 0,               // 无优惠
-    TX_DISC_FULL_REDUCTION,         // 满减
-    TX_DISC_PERCENT_OFF             // 折扣
+    TX_DISC_FULL_REDUCTION,         // 满20减5
+    TX_DISC_PERCENT_OFF,            // 9折
+    TX_DISC_FULL_100_80PCT,         // 满100打8折
+    TX_DISC_FULL_200_50             // 满200减50
 } tx_discount_type_t;
 
 // 4. 单笔交易记录

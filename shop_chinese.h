@@ -26,9 +26,11 @@
 #define CN_CHECKOUT   "\xe7\xbb\x93\xe8\xb4\xa6"            // 结账
 #define CN_CLEAR      "\xe6\xb8\x85\xe7\xa9\xba"            // 清空
 #define CN_DISCOUNTS  "\xe6\x8a\x98\xe6\x89\xa3\xe6\xb4\xbb\xe5\x8a\xa8"  // 折扣活动
-#define CN_NO_DISC    "\xe6\x97\xa0\xe4\xbc\x98\xe6\x83\xa0" // 无优惠
-#define CN_FULL_RED   "\xe6\xbb\xa1" "20" "\xe5\x87\x8f" "5" // 满20减5
-#define CN_90PCT      "9" "\xe6\x8a\x98"                     // 9折
+#define CN_DISC_NONE         "\xe6\x97\xa0\xe4\xbc\x98\xe6\x83\xa0"                        // 无优惠
+#define CN_DISC_FULL20_RED5  "\xe6\xbb\xa1" "20" "\xe5\x87\x8f" "5"                         // 满20减5
+#define CN_DISC_90PCT        "\xe6\x89\x93" "9" "\xe6\x8a\x98"                              // 打9折
+#define CN_DISC_FULL100_80PCT "\xe6\xbb\xa1" "100" "\xe6\x89\x93" "8" "\xe6\x8a\x98"        // 满100打8折
+#define CN_DISC_FULL200_RED50 "\xe6\xbb\xa1" "200" "\xe5\x87\x8f" "50"                      // 满200减50
 
 // 动态提示字符串的中文部分（用于 snprintf 拼接）
 #define CN_QTY_PREFIX "\xe8\xaf\xb7\xe8\xbe\x93\xe5\x85\xa5 ["  // 请输入 [
@@ -56,9 +58,11 @@
 #define CN_BEFORE_DISC "\xe6\x8a\x98\xe6\x89\xa3\xe5\x89\x8d"  // 折扣前
 #define CN_AFTER_DISC  "\xe6\x8a\x98\xe5\x90\x8e"             // 折后
 #define CN_TOTAL       "\xe6\x80\xbb\xe8\xae\xa1"             // 总计
-#define CN_DESC_FULL   " (\xe6\xbb\xa1" "20" "\xe5\x87\x8f" "5)"  //  (满20减5)
-#define CN_DESC_90PCT  " (9" "\xe6\x8a\x98" ")"               //  (9折)
-#define CN_DESC_NONE   ""                                     // (无折扣时不显示)
+#define CN_DESC_DISC_FULL20        " (\xe6\xbb\xa1" "20" "\xe5\x87\x8f" "5)"                       //  (满20减5)
+#define CN_DESC_DISC_90PCT         " (9" "\xe6\x8a\x98" ")"                                        //  (9折)
+#define CN_DESC_DISC_FULL100_80PCT " (\xe6\xbb\xa1" "100" "\xe6\x89\x93" "8" "\xe6\x8a\x98" ")"    //  (满100打8折)
+#define CN_DESC_DISC_FULL200_RED50 " (\xe6\xbb\xa1" "200" "\xe5\x87\x8f" "50" ")"                  //  (满200减50)
+#define CN_DESC_DISC_NONE          ""                                                              // (无折扣时不显示)
 
 // 交易记录界面
 #define CN_HISTORY     "\xe4\xba\xa4\xe6\x98\x93\xe8\xae\xb0\xe5\xbd\x95"  // 交易记录

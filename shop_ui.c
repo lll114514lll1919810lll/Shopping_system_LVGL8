@@ -15,8 +15,8 @@ void * sdram_malloc(uint32_t size) {
 product_t shop_products[MAX_PRODUCTS] = {
     {0, CN_APPLE,      8,  "kg",        "0:/apple.bin"},
     {1, CN_MILK,       6,  CN_BOX,      "0:/milk.bin"},
-    {2, CN_BREAD,      12, CN_PACK,     "0:/bread.bin"},
-    {3, CN_WATERMELON, 3,  "kg",        "0:/xigua.bin"},
+    {2, CN_BREAD,      10, CN_PACK,     "0:/bread.bin"},
+    {3, CN_WATERMELON, 3,  "kg",        "0:/watermelon.bin"},
     {4, CN_COLA,       3,  CN_BOTTLE,   "0:/cola.bin"},
     {5, CN_CHOCOLATE,  40, CN_BOX,      "0:/chocolate.bin"}
 };
@@ -170,7 +170,7 @@ void shop_ui_init(void)
 		lv_obj_set_width(discount_title, lv_pct(100));
 
 		// 复选框选项（互斥组）
-		static const char * discount_opts[] = {CN_NO_DISC, CN_FULL_RED, CN_90PCT, NULL};
+		static const char * discount_opts[] = {CN_DISC_NONE, CN_DISC_FULL20_RED5, CN_DISC_90PCT, CN_DISC_FULL100_80PCT, CN_DISC_FULL200_RED50, NULL};
 		for (int i = 0; discount_opts[i] != NULL; i++) {
 				lv_obj_t * cb = lv_checkbox_create(discount_panel);
 				lv_checkbox_set_text(cb, discount_opts[i]);
