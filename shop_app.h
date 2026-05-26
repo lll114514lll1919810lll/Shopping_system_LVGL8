@@ -82,7 +82,9 @@ extern const lv_font_t ziti_title;          // 18px中文标题字体
 
 /* ==================== 核心功能函数原型 ==================== */
 
-void shop_ui_init(void);
+void shop_ui_init(void);                    // 初始化UI（显示主页）
+void show_home_screen(void);                // 显示主页
+void show_shop_screen(void);                // 显示购物界面
 void product_btn_event_cb(lv_event_t * e);
 void kb_event_cb(lv_event_t * e);
 void checkout_btn_event_cb(lv_event_t * e);
@@ -108,6 +110,7 @@ int  tx_log_load_from_sd(void);                             // 从 SD 卡加载
 /* ==================== 交易历史界面 ==================== */
 void show_history_panel(void);                              // 显示交易历史面板
 void history_btn_event_cb(lv_event_t * e);                  // 交易记录按钮回调
+void shop_ui_close_shop_screen(void);                       // 关闭购物界面
 
 /* ==================== 底层接口 ==================== */
 extern void * sdram_malloc(uint32_t size);

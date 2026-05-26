@@ -16,3 +16,7 @@ Listings/
 .vscode/
 /back.h
 .github/
+
+# Claude Code
+.claude/
+CLAUDE.md
