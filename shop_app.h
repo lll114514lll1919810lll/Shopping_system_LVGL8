@@ -6,16 +6,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* ==================== ³£Á¿¶¨Òå ==================== */
-#define MAX_PRODUCTS         6      // ÉÌÆ·ÖÖÀàÊı
-#define MAX_CART_ITEMS       10     // ¹ºÎï³µ×î¶àÉÌÆ·ÏîÊı
-#define MAX_TX_HISTORY       30     // ÀúÊ·½»Ò×¼ÇÂ¼×î´óÌõÊı
-#define MAX_TX_ITEMS_PER_TX  10     // µ¥±Ê½»Ò××î¶àÃ÷Ï¸ÏîÊı
+/* ==================== å¸¸é‡å®šä¹‰ ==================== */
+#define MAX_PRODUCTS         6      // å•†å“ç§ç±»æ•°
+#define MAX_CART_ITEMS       10     // è´­ç‰©è½¦æœ€å¤šå•†å“é¡¹æ•°
+#define MAX_TX_HISTORY       30     // å†å²äº¤æ˜“è®°å½•æœ€å¤§æ¡æ•°
+#define MAX_TX_ITEMS_PER_TX  10     // å•ç¬”äº¤æ˜“æœ€å¤šæ˜ç»†é¡¹æ•°
 #define TX_LOG_FILE          "0:/transactions.csv"
 
-/* ==================== Êı¾İ½á¹¹¶¨Òå ==================== */
+/* ==================== æ•°æ®ç»“æ„å®šä¹‰ ==================== */
 
-// 1. ÉÌÆ·½á¹¹Ìå
+// 1. å•†å“ç»“æ„ä½“
 typedef struct {
     uint8_t id;
     const char * name;
@@ -24,67 +24,70 @@ typedef struct {
     const char * img_path;
 } product_t;
 
-// 2. ½»Ò×Ã÷Ï¸Ïî£¨µ¥¸öÉÌÆ·ÔÚÒ»±Ê½»Ò×ÖĞµÄ¼ÇÂ¼£©
+// 2. äº¤æ˜“æ˜ç»†é¡¹ï¼ˆå•ä¸ªå•†å“åœ¨ä¸€ç¬”äº¤æ˜“ä¸­çš„è®°å½•ï¼‰
 typedef struct {
-    uint8_t product_id;             // ÉÌÆ·ID£¨¶ÔÓ¦ shop_products Ë÷Òı£©
-    float   quantity;               // ÊıÁ¿/ÖØÁ¿
-    float   subtotal;               // Ğ¡¼Æ½ğ¶î£¨quantity * price£©
+    uint8_t product_id;             // å•†å“IDï¼ˆå¯¹åº” shop_products ç´¢å¼•ï¼‰
+    float   quantity;               // æ•°é‡/é‡é‡
+    float   subtotal;               // å°è®¡é‡‘é¢ï¼ˆquantity * priceï¼‰
 } tx_item_t;
 
-// 3. ÓÅ»İÀàĞÍÃ¶¾Ù£¨ÓÃÓÚ½»Ò×¼ÇÂ¼±£´æ£©
+// 3. ä¼˜æƒ ç±»å‹æšä¸¾ï¼ˆç”¨äºäº¤æ˜“è®°å½•ä¿å­˜ï¼‰
 typedef enum {
-    TX_DISC_NONE = 0,               // ÎŞÓÅ»İ
-    TX_DISC_FULL_REDUCTION,         // Âú20¼õ5
-    TX_DISC_PERCENT_OFF,            // 9ÕÛ
-    TX_DISC_FULL_100_80PCT,         // Âú100´ò8ÕÛ
-    TX_DISC_FULL_200_50             // Âú200¼õ50
+    TX_DISC_NONE = 0,               // æ— ä¼˜æƒ 
+    TX_DISC_FULL_REDUCTION,         // æ»¡20å‡5
+    TX_DISC_PERCENT_OFF,            // 9æŠ˜
+    TX_DISC_FULL_100_80PCT,         // æ»¡100æ‰“8æŠ˜
+    TX_DISC_FULL_200_50             // æ»¡200å‡50
 } tx_discount_type_t;
 
-// 4. µ¥±Ê½»Ò×¼ÇÂ¼
+// 4. å•ç¬”äº¤æ˜“è®°å½•
 typedef struct {
-    uint32_t          id;                        // ½»Ò×ĞòºÅ£¨×ÔÔö£©
-    float             total_before_discount;      // ÕÛ¿ÛÇ°×Ü¼Û
-    float             total_after_discount;       // ÕÛ¿Ûºó×Ü¼Û
-    tx_discount_type_t discount_type;             // Ê¹ÓÃµÄÓÅ»İÀàĞÍ
-    uint8_t           item_count;                 // Ã÷Ï¸ÏîÊı
-    tx_item_t         items[MAX_TX_ITEMS_PER_TX]; // ÉÌÆ·Ã÷Ï¸
+    uint32_t          id;                        // äº¤æ˜“åºå·ï¼ˆè‡ªå¢ï¼‰
+    float             total_before_discount;      // æŠ˜æ‰£å‰æ€»ä»·
+    float             total_after_discount;       // æŠ˜æ‰£åæ€»ä»·
+    tx_discount_type_t discount_type;             // ä½¿ç”¨çš„ä¼˜æƒ ç±»å‹
+    uint8_t           item_count;                 // æ˜ç»†é¡¹æ•°
+    tx_item_t         items[MAX_TX_ITEMS_PER_TX]; // å•†å“æ˜ç»†
 } transaction_t;
 
-// 5. ½»Ò×ÀúÊ·¼ÇÂ¼ÈİÆ÷£¨RAMÖĞµÄ»º´æ£©
+// 5. äº¤æ˜“å†å²è®°å½•å®¹å™¨ï¼ˆRAMä¸­çš„ç¼“å­˜ï¼‰
 typedef struct {
-    transaction_t records[MAX_TX_HISTORY];  // ½»Ò×¼ÇÂ¼Êı×é
-    uint8_t       count;                     // µ±Ç°¼ÇÂ¼ÌõÊı
-    uint32_t      next_id;                   // ÏÂÒ»±Ê½»Ò×ĞòºÅ
+    transaction_t records[MAX_TX_HISTORY];  // äº¤æ˜“è®°å½•æ•°ç»„
+    uint8_t       count;                     // å½“å‰è®°å½•æ¡æ•°
+    uint32_t      next_id;                   // ä¸‹ä¸€ç¬”äº¤æ˜“åºå·
 } transaction_log_t;
 
-// 6. ¼üÅÌÊäÈëÄ£Ê½£¨¾ö¶¨È·ÈÏºóÖ´ĞĞÊ²Ã´ĞĞÎª£©
+// 6. é”®ç›˜è¾“å…¥æ¨¡å¼ï¼ˆå†³å®šç¡®è®¤åæ‰§è¡Œä»€ä¹ˆè¡Œä¸ºï¼‰
 typedef enum {
-    KB_MODE_NONE = 0,           // ¿ÕÏĞ£¬ÎŞÊäÈë
-    KB_MODE_ADD_TO_CART,        // Ìí¼ÓÉÌÆ·µ½¹ºÎï³µ
-    KB_MODE_EDIT_QUANTITY,      // ĞŞ¸Ä¹ºÎï³µÖĞÉÌÆ·ÊıÁ¿
-    // ¿ÉÀ©Õ¹¸ü¶àÄ£Ê½£º
-    // KB_MODE_SET_PRICE,       // ÊÖ¶¯ÉèÖÃ¼Û¸ñ
-    // KB_MODE_INPUT_ID,        // ÊäÈëÉÌÆ·ID
+    KB_MODE_NONE = 0,           // ç©ºé—²ï¼Œæ— è¾“å…¥
+    KB_MODE_ADD_TO_CART,        // æ·»åŠ å•†å“åˆ°è´­ç‰©è½¦
+    KB_MODE_EDIT_QUANTITY,      // ä¿®æ”¹è´­ç‰©è½¦ä¸­å•†å“æ•°é‡
+    // å¯æ‰©å±•æ›´å¤šæ¨¡å¼ï¼š
+    // KB_MODE_SET_PRICE,       // æ‰‹åŠ¨è®¾ç½®ä»·æ ¼
+    // KB_MODE_INPUT_ID,        // è¾“å…¥å•†å“ID
 } kb_input_mode_t;
 
-/* ==================== È«¾Ö±äÁ¿ÉùÃ÷ ==================== */
+/* ==================== å…¨å±€å˜é‡å£°æ˜ ==================== */
 
 extern product_t shop_products[MAX_PRODUCTS];
-extern transaction_log_t tx_log;             // ½»Ò×ÀúÊ·¼ÇÂ¼
+extern transaction_log_t tx_log;             // äº¤æ˜“å†å²è®°å½•
 extern lv_obj_t * cart_list;
 extern lv_obj_t * input_ta;
 extern lv_obj_t * num_kb;
-extern lv_obj_t * label_full;               // ¸²¸ÇÈ«ÆÁµÄ±³¾°label£¨ÓÃÓÚÒş²Ø¼üÅÌµÈ£©
+extern lv_obj_t * label_full;               // è¦†ç›–å…¨å±çš„èƒŒæ™¯labelï¼ˆç”¨äºéšè—é”®ç›˜ç­‰ï¼‰
+extern int coupon_remaining[5];              // æ¯ç§ä¼˜æƒ åˆ¸å‰©ä½™æ•°é‡
+extern lv_obj_t * discount_checkboxes[5];    // ä¼˜æƒ åˆ¸å¤é€‰æ¡†å¯¹è±¡æ•°ç»„
+extern int current_discount;                 // å½“å‰é€‰ä¸­çš„ä¼˜æƒ ç±»å‹
 
-/* ==================== ×ÖÌåÉùÃ÷ ==================== */
-extern const lv_font_t ziti;                // 14pxÖĞÎÄĞ¡×ÖÌå
-extern const lv_font_t ziti_title;          // 18pxÖĞÎÄ±êÌâ×ÖÌå
+/* ==================== å­—ä½“å£°æ˜ ==================== */
+extern const lv_font_t ziti;                // 14pxä¸­æ–‡å°å­—ä½“
+extern const lv_font_t ziti_title;          // 18pxä¸­æ–‡æ ‡é¢˜å­—ä½“
 
-/* ==================== ºËĞÄ¹¦ÄÜº¯ÊıÔ­ĞÍ ==================== */
+/* ==================== æ ¸å¿ƒåŠŸèƒ½å‡½æ•°åŸå‹ ==================== */
 
-void shop_ui_init(void);                    // ³õÊ¼»¯UI£¨ÏÔÊ¾Ö÷Ò³£©
-void show_home_screen(void);                // ÏÔÊ¾Ö÷Ò³
-void show_shop_screen(void);                // ÏÔÊ¾¹ºÎï½çÃæ
+void shop_ui_init(void);                    // åˆå§‹åŒ–UIï¼ˆæ˜¾ç¤ºä¸»é¡µï¼‰
+void show_home_screen(void);                // æ˜¾ç¤ºä¸»é¡µ
+void show_shop_screen(void);                // æ˜¾ç¤ºè´­ç‰©ç•Œé¢
 void product_btn_event_cb(lv_event_t * e);
 void kb_event_cb(lv_event_t * e);
 void checkout_btn_event_cb(lv_event_t * e);
@@ -92,31 +95,32 @@ void clear_btn_event_cb(lv_event_t * e);
 void label_event_cb(lv_event_t *e);
 void discount_cb_event_cb(lv_event_t * e);
 void create_discount_panel(lv_obj_t * parent);
+void shop_ui_update_coupon_display(void);
 void cart_list_btn_event_cb(lv_event_t* e);
 
-/* ¼üÅÌÊäÈë½çÃæ¿ØÖÆ£¨¹©ÆäËûÄ£¿é¸´ÓÃ¼üÅÌÊ±µ÷ÓÃ£© */
-void show_input_ui(void);                    // ÏÔÊ¾¼üÅÌÊäÈë½çÃæ
-void hide_input_ui(void);                    // Òş²Ø¼üÅÌÊäÈë½çÃæ
-extern kb_input_mode_t current_kb_mode;      // µ±Ç°¼üÅÌÊäÈëÄ£Ê½£¨ÉèÖÃºó¾ö¶¨È·ÈÏĞĞÎª£©
+/* é”®ç›˜è¾“å…¥ç•Œé¢æ§åˆ¶ï¼ˆä¾›å…¶ä»–æ¨¡å—å¤ç”¨é”®ç›˜æ—¶è°ƒç”¨ï¼‰ */
+void show_input_ui(void);                    // æ˜¾ç¤ºé”®ç›˜è¾“å…¥ç•Œé¢
+void hide_input_ui(void);                    // éšè—é”®ç›˜è¾“å…¥ç•Œé¢
+extern kb_input_mode_t current_kb_mode;      // å½“å‰é”®ç›˜è¾“å…¥æ¨¡å¼ï¼ˆè®¾ç½®åå†³å®šç¡®è®¤è¡Œä¸ºï¼‰
 void cart_list_btn_event_cb(lv_event_t* e);
 
-/* ==================== ½»Ò×¼ÇÂ¼º¯ÊıÔ­ĞÍ ==================== */
-void tx_log_init(void);                                     // ³õÊ¼»¯½»Ò×¼ÇÂ¼
-void tx_log_add(transaction_t * tx);                        // Ìí¼ÓÒ»±Ê½»Ò×¼ÇÂ¼
-void tx_log_clear(void);                                    // Çå¿ÕËùÓĞ½»Ò×¼ÇÂ¼
-int  tx_log_save_to_sd(void);                               // ±£´æµ½ SD ¿¨
-int  tx_log_load_from_sd(void);                             // ´Ó SD ¿¨¼ÓÔØ
+/* ==================== äº¤æ˜“è®°å½•å‡½æ•°åŸå‹ ==================== */
+void tx_log_init(void);                                     // åˆå§‹åŒ–äº¤æ˜“è®°å½•
+void tx_log_add(transaction_t * tx);                        // æ·»åŠ ä¸€ç¬”äº¤æ˜“è®°å½•
+void tx_log_clear(void);                                    // æ¸…ç©ºæ‰€æœ‰äº¤æ˜“è®°å½•
+int  tx_log_save_to_sd(void);                               // ä¿å­˜åˆ° SD å¡
+int  tx_log_load_from_sd(void);                             // ä» SD å¡åŠ è½½
 
-/* ==================== ½»Ò×ÀúÊ·½çÃæ ==================== */
-void show_history_panel(void);                              // ÏÔÊ¾½»Ò×ÀúÊ·Ãæ°å
-void history_btn_event_cb(lv_event_t * e);                  // ½»Ò×¼ÇÂ¼°´Å¥»Øµ÷
-void shop_ui_close_shop_screen(void);                       // ¹Ø±Õ¹ºÎï½çÃæ
+/* ==================== äº¤æ˜“å†å²ç•Œé¢ ==================== */
+void show_history_panel(void);                              // æ˜¾ç¤ºäº¤æ˜“å†å²é¢æ¿
+void history_btn_event_cb(lv_event_t * e);                  // äº¤æ˜“è®°å½•æŒ‰é’®å›è°ƒ
+void shop_ui_close_shop_screen(void);                       // å…³é—­è´­ç‰©ç•Œé¢
 
-/* ==================== µ×²ã½Ó¿Ú ==================== */
+/* ==================== åº•å±‚æ¥å£ ==================== */
 extern void * sdram_malloc(uint32_t size);
 extern void read_file_to_array(const char *filename, void *array, uint32_t size);
 
-/* ==================== UI ¸¨Öúº¯Êı ==================== */
+/* ==================== UI è¾…åŠ©å‡½æ•° ==================== */
 lv_obj_t * shop_ui_show_msgbox(const char * title, const char * message, const lv_color_t * txt_color);
 void shop_ui_add_cart_item(const char * item_text, const char * product_name);
 void shop_ui_show_checkout_result(const transaction_t * tx, float grand_total, float final_total, const char * discount_desc);

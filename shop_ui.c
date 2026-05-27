@@ -1,7 +1,14 @@
 #include "shop_app.h"
 #include "shop_chinese.h"
 
-// SDRAM Ä£Äâ¶Ñ¹ÜÀí (´Ó 4MB Æ«ÒÆ´¦¿ªÊ¼)
+
+// ä¼˜æƒ åˆ¸å¤é€‰æ¡†å¼•ç”¨åŠåŸºæ–‡æœ¬ï¼ˆä¾›æ›´æ–°æ˜¾ç¤ºä½¿ç”¨ï¼‰
+lv_obj_t * discount_checkboxes[5] = {NULL};
+static const char * discount_base_texts[] = {
+    CN_DISC_NONE, CN_DISC_FULL20_RED5, CN_DISC_90PCT, CN_DISC_FULL100_80PCT, CN_DISC_FULL200_RED50
+};
+
+// SDRAM æ¨¡æ‹Ÿå †ç®¡ç† (ä» 4MB åç§»å¤„å¼€å§‹)
 static uint32_t sdram_heap_ptr = 0xC0000000 + (1024 * 1024 * 4); 
 
 void * sdram_malloc(uint32_t size) {
@@ -11,7 +18,7 @@ void * sdram_malloc(uint32_t size) {
     return p;
 }
 
-// ÉÌÆ·Êı¾İ¶¨Òå
+// å•†å“æ•°æ®å®šä¹‰
 product_t shop_products[MAX_PRODUCTS] = {
     {0, CN_APPLE,      8,  "kg",        "0:/apple.bin"},
     {1, CN_MILK,       6,  CN_BOX,      "0:/milk.bin"},
@@ -25,40 +32,40 @@ lv_obj_t * cart_list = NULL;
 lv_obj_t * input_ta = NULL;
 lv_obj_t * num_kb = NULL;
 lv_obj_t * label_full = NULL;
-static lv_img_dsc_t img_dscs[MAX_PRODUCTS]; // ´æ´¢Í¼Æ¬ÃèÊö·û
+static lv_img_dsc_t img_dscs[MAX_PRODUCTS]; // å­˜å‚¨å›¾ç‰‡æè¿°ç¬¦
 
-// Ò³Ãæ¹ÜÀí
-static lv_obj_t * home_screen = NULL;        // Ö÷Ò³ÆÁÄ»ÒıÓÃ
-static lv_obj_t * shop_screen = NULL;        // ¹ºÎï½çÃæÆÁÄ»ÒıÓÃ
-static lv_obj_t * history_screen = NULL;     // ½»Ò×ÀúÊ·Ò³Ãæ
+// é¡µé¢ç®¡ç†
+static lv_obj_t * home_screen = NULL;        // ä¸»é¡µå±å¹•å¼•ç”¨
+static lv_obj_t * shop_screen = NULL;        // è´­ç‰©ç•Œé¢å±å¹•å¼•ç”¨
+static lv_obj_t * history_screen = NULL;     // äº¤æ˜“å†å²é¡µé¢
 
-// Ç°ÏòÉùÃ÷
+// å‰å‘å£°æ˜
 static void shop_btn_cb(lv_event_t * e);
 static void history_btn_home_cb(lv_event_t * e);
 static void back_btn_cb(lv_event_t * e);
 
-/* ´´½¨Ö÷Ò³ */
+/* åˆ›å»ºä¸»é¡µ */
 void show_home_screen(void)
 {
-    // ±ÜÃâÖØ¸´´´½¨
+    // é¿å…é‡å¤åˆ›å»º
     if(home_screen) {
         lv_scr_load_anim(home_screen, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 300, 0, false);
         return;
     }
 
-    // ´´½¨Ö÷Ò³ÆÁÄ»
+    // åˆ›å»ºæ–°çš„å±å¹•
     home_screen = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(home_screen, lv_color_white(), 0);
     lv_obj_set_style_bg_opa(home_screen, LV_OPA_COVER, 0);
 
-    // ±êÌâ±êÇ©
+    // ä¸»æ ‡é¢˜ï¼šäº¤æ˜“æ˜ç»†ï¼ˆå·¦ä¸Šè§’ï¼‰
     lv_obj_t * title = lv_label_create(home_screen);
     lv_label_set_text(title, CN_HOME_TITLE);
     lv_obj_set_style_text_font(title, &ziti_title, 0);
     lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_BLUE), 0);
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 150);
 
-    // ¹ºÎï°´Å¥
+    // è´­ç‰©æŒ‰é’®
     lv_obj_t * btn_shop = lv_btn_create(home_screen);
     lv_obj_set_size(btn_shop, 200, 80);
     lv_obj_align(btn_shop, LV_ALIGN_CENTER, -120, 50);
@@ -69,7 +76,7 @@ void show_home_screen(void)
     lv_obj_set_style_text_font(lbl_shop, &ziti_title, 0);
     lv_obj_center(lbl_shop);
 
-    // ½»Ò×¼ÇÂ¼°´Å¥
+    // äº¤æ˜“è®°å½•æŒ‰é’®
     lv_obj_t * btn_history = lv_btn_create(home_screen);
     lv_obj_set_size(btn_history, 200, 80);
     lv_obj_align(btn_history, LV_ALIGN_CENTER, 120, 50);
@@ -80,42 +87,42 @@ void show_home_screen(void)
     lv_obj_set_style_text_font(lbl_history, &ziti_title, 0);
     lv_obj_center(lbl_history);
 
-    // ÇĞ»»µ½Ö÷Ò³
+    // åˆ‡æ¢åˆ°ä¸»é¡µ
     lv_scr_load_anim(home_screen, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 300, 0, false);
 }
 
-/* Ö÷Ò³¹ºÎï°´Å¥»Øµ÷ */
+/* ä¸»é¡µè´­ç‰©æŒ‰é’®å›è°ƒ */
 static void shop_btn_cb(lv_event_t * e)
 {
     (void)e;
     show_shop_screen();
 }
 
-/* Ö÷Ò³½»Ò×¼ÇÂ¼°´Å¥»Øµ÷ */
+/* ä¸»é¡µäº¤æ˜“è®°å½•æŒ‰é’®å›è°ƒ */
 static void history_btn_home_cb(lv_event_t * e)
 {
     (void)e;
     show_history_panel();
 }
 
-/* ·µ»ØÖ÷Ò³°´Å¥»Øµ÷£¨¹ºÎï½çÃæºÍ½»Ò×¼ÇÂ¼½çÃæ¹²ÓÃ£© */
+/* è¿”å›ä¸»é¡µæŒ‰é’®å›è°ƒï¼ˆè´­ç‰©ç•Œé¢å’Œäº¤æ˜“è®°å½•ç•Œé¢å…±ç”¨ï¼‰ */
 static void back_btn_cb(lv_event_t * e)
 {
     (void)e;
-    // Ö»ÇĞ»»ÆÁÄ»£¬²»É¾³ıÈÎºÎÆÁÄ»£¬·ÀÖ¹²Ù×÷µ±Ç°»î¶¯ÆÁÄ»µ¼ÖÂ±ÀÀ£
+    // åªåˆ‡æ¢å±å¹•ï¼Œä¸åˆ é™¤ä»»ä½•å±å¹•ï¼Œé˜²æ­¢æ“ä½œå½“å‰æ´»åŠ¨å±å¹•å¯¼è‡´å´©æºƒ
     show_home_screen();
 }
 
-/* ÏÔÊ¾¹ºÎï½çÃæ */
+/* æ˜¾ç¤ºè´­ç‰©ç•Œé¢ */
 void show_shop_screen(void)
 {
-    // ±ÜÃâÖØ¸´´´½¨
+    // é¿å…é‡å¤åˆ›å»º
     if(shop_screen) {
         lv_scr_load_anim(shop_screen, LV_SCR_LOAD_ANIM_MOVE_LEFT, 300, 0, false);
         return;
     }
 
-    // ´´½¨¹ºÎï½çÃæÆÁÄ»
+    // åˆ›å»ºè´­ç‰©ç•Œé¢å±å¹•
     shop_screen = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(shop_screen, lv_color_white(), 0);
     lv_obj_set_style_bg_opa(shop_screen, LV_OPA_COVER, 0);
@@ -123,20 +130,20 @@ void show_shop_screen(void)
     uint32_t img_size_with_header = 200 * 200 * 2 + 4; 
     uint32_t pure_data_size = 200 * 200 * 2;
 
-    // 1. ×ó²àÈİÆ÷
+    // 1. å·¦ä¾§å®¹å™¨
     lv_obj_t * product_panel = lv_obj_create(shop_screen);
     lv_obj_set_size(product_panel, 520, 580);
     lv_obj_set_pos(product_panel, 10, 10);
     lv_obj_set_flex_flow(product_panel, LV_FLEX_FLOW_ROW_WRAP);
     lv_obj_set_style_pad_gap(product_panel, 15, 0);
 
-    // 2. Ñ­»·¼ÓÔØÍ¼Æ¬²¢Éú³É¿¨Æ¬
+    // 2. å¾ªç¯åŠ è½½å›¾ç‰‡å¹¶ç”Ÿæˆå¡ç‰‡
     for(int i = 0; i < MAX_PRODUCTS; i++) {
-        // ·ÖÅä²¢¶ÁÈ¡ SD ¿¨Í¼Æ¬µ½ SDRAM
+        // åˆ†é…å¹¶è¯»å– SD å¡å›¾ç‰‡åˆ° SDRAM
         uint8_t * image_buffer = (uint8_t *)sdram_malloc(img_size_with_header);
         read_file_to_array(shop_products[i].img_path, image_buffer, img_size_with_header);
 
-        // ³õÊ¼»¯ÃèÊö·û
+        // åˆå§‹åŒ–æè¿°ç¬¦
         img_dscs[i].header.always_zero = 0;
         img_dscs[i].header.cf = LV_IMG_CF_TRUE_COLOR;
         img_dscs[i].header.w = 200;
@@ -144,27 +151,27 @@ void show_shop_screen(void)
         img_dscs[i].data_size = pure_data_size;
         img_dscs[i].data = image_buffer + 4;
 
-        // ´´½¨¿¨Æ¬ÈİÆ÷
+        // åˆ›å»ºå¡ç‰‡å®¹å™¨
         lv_obj_t * item_cont = lv_obj_create(product_panel);
         lv_obj_set_size(item_cont, 220, 280); 
         lv_obj_clear_flag(item_cont, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_style_pad_all(item_cont, 2, 0);
         lv_obj_set_style_pad_top(item_cont, 0, 0);
 
-        // ´´½¨Í¼Æ¬
+        // åˆ›å»ºå›¾ç‰‡
         lv_obj_t * img = lv_img_create(item_cont);
         lv_img_set_src(img, &img_dscs[i]);
         lv_obj_align(img, LV_ALIGN_TOP_MID, 0, 0);
         lv_obj_clear_flag(img, LV_OBJ_FLAG_CLICKABLE);
 
-        // ´´½¨ÉÌÆ·Ãû±êÇ©£¨´ó×ÖÌå£©
+        // åˆ›å»ºå•†å“åæ ‡ç­¾ï¼ˆå¤§å­—ä½“ï¼‰
         lv_obj_t * name_label = lv_label_create(item_cont);
         lv_label_set_text(name_label, shop_products[i].name);
         lv_obj_set_style_text_font(name_label, &ziti_title, 0);
         lv_obj_align(name_label, LV_ALIGN_TOP_MID, 0, 208);
         lv_obj_set_style_text_align(name_label, LV_TEXT_ALIGN_CENTER, 0);
 
-        // ´´½¨¼Û¸ñ±êÇ©£¨Ğ¡×ÖÌå£©
+        // åˆ›å»ºä»·æ ¼æ ‡ç­¾ï¼ˆå°å­—ä½“ï¼‰
         lv_obj_t * price_label = lv_label_create(item_cont);
         lv_label_set_text_fmt(price_label, "#ff0000 %d " CN_YUAN "# / %s",
                               shop_products[i].price,
@@ -174,26 +181,26 @@ void show_shop_screen(void)
         lv_obj_align(price_label, LV_ALIGN_TOP_MID, 0, 245);
         lv_obj_set_style_text_align(price_label, LV_TEXT_ALIGN_CENTER, 0);
 
-        // °ó¶¨ÊÂ¼ş
+        // ç»‘å®šäº‹ä»¶
         lv_obj_add_flag(item_cont, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_event_cb(item_cont, product_btn_event_cb, LV_EVENT_CLICKED, &shop_products[i]);
     }
 
-    // 3. ÓÒ²à¹ºÎï³µ
+    // 3. å³ä¾§è´­ç‰©è½¦
     cart_list = lv_list_create(shop_screen);
     lv_obj_set_size(cart_list, 240, 450);
     lv_obj_set_pos(cart_list, 540, 10);
     lv_obj_set_style_pad_gap(cart_list, 12, 0);
     lv_obj_set_style_pad_all(cart_list, 10, 0);
 
-    // ±êÌâ
+    // æ ‡é¢˜
     lv_obj_t * cart_title = lv_label_create(cart_list);
     lv_label_set_text(cart_title, CN_CART_TITLE);
     lv_obj_set_style_text_font(cart_title, &ziti_title, 0);
     lv_obj_set_style_text_align(cart_title, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_width(cart_title, lv_pct(100));
 
-    // 4. ÊäÈë¿òÓë¼üÅÌ
+    // 4. è¾“å…¥æ¡†ä¸é”®ç›˜
     input_ta = lv_textarea_create(shop_screen);
     lv_obj_set_size(input_ta, 300, 50);
     lv_obj_align(input_ta, LV_ALIGN_CENTER, 0, -100);
@@ -210,12 +217,12 @@ void show_shop_screen(void)
     lv_obj_set_size(label_full, 1024, 600);
     lv_obj_move_background(label_full);
     lv_obj_add_flag(label_full, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_flag(label_full, LV_OBJ_FLAG_HIDDEN);  // Ä¬ÈÏÒş²Ø
+    lv_obj_add_flag(label_full, LV_OBJ_FLAG_HIDDEN);  // é»˜è®¤éšè—
     lv_obj_add_event_cb(label_full, label_event_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_set_style_bg_color(label_full, lv_color_black(), 0);
     lv_obj_set_style_bg_opa(label_full, LV_OPA_60, 0);
 
-    // 5. µ×²¿¿ØÖÆ°´Å¥
+    // 5. åº•éƒ¨æ§åˆ¶æŒ‰é’®
     lv_obj_t * btn_checkout = lv_btn_create(shop_screen);
     lv_obj_set_size(btn_checkout, 110, 50);
     lv_obj_set_pos(btn_checkout, 540, 530);
@@ -234,7 +241,7 @@ void show_shop_screen(void)
     lv_label_set_text(lbl_clear, CN_CLEAR);
     lv_obj_center(lbl_clear);
 
-    // 5b. ·µ»ØÖ÷Ò³°´Å¥£¨Ìæ´úÔ­À´µÄ½»Ò×¼ÇÂ¼°´Å¥£©
+    // 5b. è¿”å›ä¸»é¡µæŒ‰é’®ï¼ˆæ›¿ä»£åŸæ¥çš„äº¤æ˜“è®°å½•æŒ‰é’®ï¼‰
     lv_obj_t * btn_back = lv_btn_create(shop_screen);
     lv_obj_set_size(btn_back, 110, 50);
     lv_obj_set_pos(btn_back, 900, 530);
@@ -244,7 +251,7 @@ void show_shop_screen(void)
     lv_label_set_text(lbl_back, CN_BTN_BACK);
     lv_obj_center(lbl_back);
 
-    // 6. ÓÅ»İÃæ°å
+    // 6. ä¼˜æƒ é¢æ¿
     lv_obj_t * discount_panel = lv_obj_create(shop_screen);
     lv_obj_set_size(discount_panel, 220, 450);
     lv_obj_set_pos(discount_panel, 790, 10);
@@ -252,31 +259,45 @@ void show_shop_screen(void)
     lv_obj_set_style_pad_gap(discount_panel, 12, 0);
     lv_obj_set_style_pad_all(discount_panel, 10, 0);
 
-    // ±êÌâ
+    // æ ‡é¢˜
     lv_obj_t * discount_title = lv_label_create(discount_panel);
     lv_label_set_text(discount_title, CN_DISCOUNTS);
     lv_obj_set_style_text_font(discount_title, &ziti_title, 0);
     lv_obj_set_style_text_align(discount_title, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_width(discount_title, lv_pct(100));
 
-    // ¸´Ñ¡¿òÑ¡Ïî£¨»¥³â×é£©
-    static const char * discount_opts[] = {CN_DISC_NONE, CN_DISC_FULL20_RED5, CN_DISC_90PCT, CN_DISC_FULL100_80PCT, CN_DISC_FULL200_RED50, NULL};
-    for (int i = 0; discount_opts[i] != NULL; i++) {
+    // å¤é€‰æ¡†é€‰é¡¹ï¼ˆäº’æ–¥ç»„ï¼Œå¸¦ä¼˜æƒ åˆ¸æ•°é‡ï¼‰
+    for (int i = 0; i < 5; i++) {
         lv_obj_t * cb = lv_checkbox_create(discount_panel);
-        lv_checkbox_set_text(cb, discount_opts[i]);
-        // °ó¶¨»Øµ÷£¬²¢´«µİÑ¡ÏîË÷Òı
-        lv_obj_add_event_cb(cb, discount_cb_event_cb, LV_EVENT_VALUE_CHANGED, (void *)(uintptr_t)i);
-        // Ä¬ÈÏÑ¡ÖĞ"ÎŞÓÅ»İ"
+        discount_checkboxes[i] = cb;
+        // ç¬¬0é¡¹"æ— ä¼˜æƒ "ä¸æ˜¾ç¤ºæ•°é‡ï¼Œå…¶ä½™æ˜¾ç¤ºå‰©ä½™å¼ æ•°
         if (i == 0) {
-            lv_obj_add_state(cb, LV_STATE_CHECKED);
+            lv_checkbox_set_text(cb, discount_base_texts[i]);
+        } else {
+            char buf[64];
+            snprintf(buf, sizeof(buf), CN_COUPON_REMAINING, discount_base_texts[i], coupon_remaining[i]);
+            lv_checkbox_set_text(cb, buf);
+            if (coupon_remaining[i] <= 0) {
+                lv_obj_add_state(cb, LV_STATE_DISABLED);
+            }
         }
+        // ç»‘å®šå›è°ƒï¼Œå¹¶ä¼ é€’é€‰é¡¹ç´¢å¼•
+        lv_obj_add_event_cb(cb, discount_cb_event_cb, LV_EVENT_VALUE_CHANGED, (void *)(uintptr_t)i);
+    }
+    // æ¢å¤ä¸Šæ¬¡é€‰ä¸­çš„ä¼˜æƒ ï¼ˆè‹¥å·²ç”¨å®Œåˆ™å›é€€åˆ°"æ— ä¼˜æƒ "ï¼‰
+    if (current_discount > 0 && coupon_remaining[current_discount] > 0) {
+        lv_obj_clear_state(discount_checkboxes[0], LV_STATE_CHECKED);
+        lv_obj_add_state(discount_checkboxes[current_discount], LV_STATE_CHECKED);
+    } else {
+        lv_obj_add_state(discount_checkboxes[0], LV_STATE_CHECKED);
+        current_discount = 0;
     }
 
-    // ÇĞ»»µ½¹ºÎï½çÃæ
+    // åˆ‡æ¢åˆ°è´­ç‰©ç•Œé¢
     lv_scr_load_anim(shop_screen, LV_SCR_LOAD_ANIM_MOVE_LEFT, 300, 0, false);
 }
 
-/* ¹Ø±Õ¹ºÎï½çÃæ */
+/* å…³é—­è´­ç‰©ç•Œé¢ */
 void shop_ui_close_shop_screen(void)
 {
     if(shop_screen) {
@@ -288,28 +309,49 @@ void shop_ui_close_shop_screen(void)
     }
 }
 
-/* ³õÊ¼»¯UI£¨ÏÔÊ¾Ö÷Ò³£© */
+/* æ›´æ–°æ‰€æœ‰ä¼˜æƒ åˆ¸å¤é€‰æ¡†çš„æ˜¾ç¤ºï¼ˆå‰©ä½™æ•°é‡å’Œç¦ç”¨çŠ¶æ€ï¼‰ */
+void shop_ui_update_coupon_display(void)
+{
+    for (int i = 0; i < 5; i++) {
+        lv_obj_t * cb = discount_checkboxes[i];
+        if (cb == NULL) continue;
+        char buf[64];
+        if (i == 0) {
+            lv_checkbox_set_text(cb, discount_base_texts[i]);
+        } else {
+            snprintf(buf, sizeof(buf), CN_COUPON_REMAINING, discount_base_texts[i], coupon_remaining[i]);
+            lv_checkbox_set_text(cb, buf);
+            if (coupon_remaining[i] <= 0) {
+                lv_obj_add_state(cb, LV_STATE_DISABLED);
+            } else {
+                lv_obj_clear_state(cb, LV_STATE_DISABLED);
+            }
+        }
+    }
+}
+
+/* åˆå§‹åŒ–UIï¼ˆæ˜¾ç¤ºä¸»é¡µï¼‰ */
 void shop_ui_init(void)
 {
     show_home_screen();
 }
 
-// ==================== UI ¸¨Öúº¯Êı ====================
+// ==================== UI è¾…åŠ©å‡½æ•° ====================
 
 /**
- * @brief ÏÔÊ¾Í¨ÓÃµ¯´°
- * @param title µ¯´°±êÌâ
- * @param message µ¯´°ÄÚÈİ
- * @param txt_color ÎÄ±¾ÑÕÉ«£¨´« NULL Ê¹ÓÃÄ¬ÈÏÑÕÉ«£©
- * @return µ¯´°¶ÔÏóÖ¸Õë
+ * @brief æ˜¾ç¤ºé€šç”¨å¼¹çª—
+ * @param title å¼¹çª—æ ‡é¢˜
+ * @param message å¼¹çª—å†…å®¹
+ * @param txt_color æ–‡æœ¬é¢œè‰²ï¼ˆä¼  NULL ä½¿ç”¨é»˜è®¤é¢œè‰²ï¼‰
+ * @return å¼¹çª—å¯¹è±¡æŒ‡é’ˆ
  */
 lv_obj_t * shop_ui_show_msgbox(const char * title, const char * message, const lv_color_t * txt_color)
 {
     lv_obj_t * mbox = lv_msgbox_create(NULL, title, message, NULL, true);
     lv_obj_center(mbox);
-    lv_obj_fade_in(mbox, 150, 0);  // µ­Èë¶¯»­
+    lv_obj_fade_in(mbox, 150, 0);  // æ·¡å…¥åŠ¨ç”»
     
-    // ÉèÖÃÎÄ±¾ÑÕÉ«£¨´« NULL Ôò²»ĞŞ¸ÄÑÕÉ«£©
+    // è®¾ç½®æ–‡æœ¬é¢œè‰²ï¼ˆä¼  NULL åˆ™ä¸ä¿®æ”¹é¢œè‰²ï¼‰
     if(txt_color != NULL) {
         lv_obj_t * mbox_txt = lv_msgbox_get_text(mbox);
         if(mbox_txt) {
@@ -317,7 +359,7 @@ lv_obj_t * shop_ui_show_msgbox(const char * title, const char * message, const l
         }
     }
     
-    // ÉèÖÃ±êÌâ×ÖÌå
+    // è®¾ç½®æ ‡é¢˜å­—ä½“
     lv_obj_t * title_lbl = lv_msgbox_get_title(mbox);
     if(title_lbl) {
         lv_obj_set_style_text_font(title_lbl, &ziti_title, 0);
@@ -326,7 +368,7 @@ lv_obj_t * shop_ui_show_msgbox(const char * title, const char * message, const l
     return mbox;
 }
 
-/* ÔÚ¹ºÎï³µÖĞ²éÕÒÖ¸¶¨ÉÌÆ·µÄ°´Å¥Ïî */
+/* åœ¨è´­ç‰©è½¦ä¸­æŸ¥æ‰¾æŒ‡å®šå•†å“çš„æŒ‰é’®é¡¹ */
 static lv_obj_t * find_cart_item_by_name(const char * product_name)
 {
     if(cart_list == NULL || product_name == NULL) return NULL;
@@ -344,38 +386,38 @@ static lv_obj_t * find_cart_item_by_name(const char * product_name)
 }
 
 /**
- * @brief Ìí¼Ó»ò¸üĞÂ¹ºÎï³µÏî£¨ÒÑ´æÔÚÔòÌæ»»£©
- * @param item_text ¹ºÎï³µÏîÏÔÊ¾ÎÄ±¾
- * @param product_name ÉÌÆ·Ãû£¨ÓÃÓÚ²éÕÒÈ¥ÖØ£©
+ * @brief æ·»åŠ æˆ–æ›´æ–°è´­ç‰©è½¦é¡¹ï¼ˆå·²å­˜åœ¨åˆ™æ›¿æ¢ï¼‰
+ * @param item_text è´­ç‰©è½¦é¡¹æ˜¾ç¤ºæ–‡æœ¬
+ * @param product_name å•†å“åï¼ˆç”¨äºæŸ¥æ‰¾å»é‡ï¼‰
  */
 void shop_ui_add_cart_item(const char * item_text, const char * product_name)
 {
     if(cart_list == NULL || item_text == NULL || product_name == NULL) return;
     
-    // ²éÕÒÊÇ·ñÒÑ´æÔÚ£¬Èô´æÔÚÔòÉ¾³ı¾ÉÏî
+    // æŸ¥æ‰¾æ˜¯å¦å·²å­˜åœ¨ï¼Œè‹¥å­˜åœ¨åˆ™åˆ é™¤æ—§é¡¹
     lv_obj_t * existing_btn = find_cart_item_by_name(product_name);
     if(existing_btn != NULL) {
         lv_obj_del(existing_btn);
     }
     
-    // Ìí¼ÓĞÂÏî
+    // æ·»åŠ æ–°é¡¹
     lv_obj_t * btn = lv_list_add_btn(cart_list, LV_SYMBOL_OK, item_text);
     lv_obj_add_event_cb(btn, cart_list_btn_event_cb, LV_EVENT_CLICKED, NULL);
 }
 
 /**
- * @brief ÏÔÊ¾½áËã½á¹ûµ¯´°
- * @param tx          ÒÑ¹¹½¨µÄ½»Ò×¼ÇÂ¼
- * @param grand_total ÕÛ¿ÛÇ°×Ü¼Û
- * @param final_total ÕÛ¿Ûºó×Ü¼Û
- * @param discount_desc ÕÛ¿ÛÃèÊöÎÄ×Ö
+ * @brief æ˜¾ç¤ºç»“ç®—ç»“æœå¼¹çª—
+ * @param tx          å·²æ„å»ºçš„äº¤æ˜“è®°å½•
+ * @param grand_total æŠ˜æ‰£å‰æ€»ä»·
+ * @param final_total æŠ˜æ‰£åæ€»ä»·
+ * @param discount_desc æŠ˜æ‰£æè¿°æ–‡å­—
  */
 void shop_ui_show_checkout_result(const transaction_t * tx, float grand_total, float final_total, const char * discount_desc)
 {
     static char result_buf[512];
     int offset = 0;
 
-    // ÁĞ³öÃ¿¸öÉÌÆ·µÄÃ÷Ï¸
+    // åˆ—å‡ºæ¯ä¸ªå•†å“çš„æ˜ç»†
     for(uint8_t k = 0; k < tx->item_count; k++) {
         uint8_t pid = tx->items[k].product_id;
         if(pid < MAX_PRODUCTS) {
@@ -388,11 +430,11 @@ void shop_ui_show_checkout_result(const transaction_t * tx, float grand_total, f
         }
     }
 
-    // ·Ö¸ôÏß
+    // åˆ†éš”çº¿
     offset += snprintf(result_buf + offset, sizeof(result_buf) - offset,
                        "------------------\n");
 
-    // ½ğ¶î£¨ÓĞÕÛ¿ÛÊ±ÏÔÊ¾ÕÛÇ°ÕÛºó£©
+    // é‡‘é¢ï¼ˆæœ‰æŠ˜æ‰£æ—¶æ˜¾ç¤ºæŠ˜å‰æŠ˜åï¼‰
     if (grand_total != final_total) {
         snprintf(result_buf + offset, sizeof(result_buf) - offset,
                  CN_BEFORE_DISC ": %.2f " CN_YUAN "\n" CN_AFTER_DISC ": %.2f " CN_YUAN "%s",
@@ -402,34 +444,33 @@ void shop_ui_show_checkout_result(const transaction_t * tx, float grand_total, f
                  CN_TOTAL ": %.2f " CN_YUAN, final_total);
     }
 
-    // ´´½¨µ¯´°
+    // åˆ›å»ºå¼¹çª—
     static lv_color_t red_color;
     red_color = lv_palette_main(LV_PALETTE_RED);
     shop_ui_show_msgbox(CN_SUCCESS, result_buf, &red_color);
 }
 
 /**
- * @brief ÏÔÊ¾¹ºÎï³µ²Ù×÷Ñ¡Ôñµ¯´°
- * @return µ¯´°¶ÔÏóÖ¸Õë£¨ÓÃÓÚ°ó¶¨ÊÂ¼ş»Øµ÷£©
+ * @brief æ˜¾ç¤ºè´­ç‰©è½¦æ“ä½œé€‰æ‹©å¼¹çª—
+ * @return å¼¹çª—å¯¹è±¡æŒ‡é’ˆï¼ˆç”¨äºç»‘å®šäº‹ä»¶å›è°ƒï¼‰
  */
 lv_obj_t * shop_ui_show_cart_action_menu(void)
 {
     static const char * action_btns[] = {CN_DELETE_ITEM, CN_EDIT_QTY, ""};
     lv_obj_t * mbox = lv_msgbox_create(NULL, CN_CART_ACTION, NULL, action_btns, true);
     lv_obj_center(mbox);
-    lv_obj_fade_in(mbox, 150, 0);  // µ­Èë¶¯»­
+    lv_obj_fade_in(mbox, 150, 0);  // æ·¡å…¥åŠ¨ç”»
     return mbox;
 }
 
-// ==================== ½»Ò×ÀúÊ·Ãæ°å¸¨Öú ====================
+// ==================== äº¤æ˜“å†å²é¢æ¿è¾…åŠ© ====================
 
-static lv_obj_t * hist_panel = NULL;    // ÀúÊ·Ãæ°åÈİÆ÷
-static lv_obj_t * hist_list  = NULL;    // ½»Ò×ÁĞ±í£¨¿É¹ö¶¯£¬ÏÔÊ¾È«²¿¼ÇÂ¼£©
+static lv_obj_t * hist_list  = NULL;    // å¯æ»šåŠ¨åˆ—è¡¨å®¹å™¨
 
-static void hist_list_item_cb(lv_event_t * e);  // Ç°ÏòÉùÃ÷
+static void hist_list_item_cb(lv_event_t * e);  // å‰å‘å£°æ˜
 static void hist_clear_cb(lv_event_t * e) { (void)e; tx_log_clear(); shop_ui_refresh_history_list(); }
 
-/* »ñÈ¡ÕÛ¿ÛÃèÊöÎÄ×Ö */
+/* è·å–æŠ˜æ‰£æè¿°æ–‡å­— */
 static const char * get_discount_desc_str(tx_discount_type_t type)
 {
     switch(type) {
@@ -441,7 +482,7 @@ static const char * get_discount_desc_str(tx_discount_type_t type)
     }
 }
 
-/* ¹Ø±Õ½»Ò×ÏêÇéµ¯´°£¨µ­³öºóÉ¾³ıÕÚÕÖ²ã£©*/
+/* å…³é—­äº¤æ˜“è¯¦æƒ…å¼¹çª—ï¼ˆæ·¡å‡ºååˆ é™¤é®ç½©å±‚ï¼‰*/
 static void close_detail_del_cb(lv_anim_t * a)
 {
     lv_obj_del((lv_obj_t *)a->var);
@@ -452,7 +493,7 @@ static void close_detail_popup(lv_event_t * e)
     lv_obj_t * overlay = (lv_obj_t *)lv_event_get_user_data(e);
     if(overlay == NULL) return;
 
-    // µ­³ö¶¯»­£¬Íê³Éºó×Ô¶¯É¾³ı
+    // æ·¡å‡ºåŠ¨ç”»ï¼Œå®Œæˆåè‡ªåŠ¨åˆ é™¤
     lv_anim_t a;
     lv_anim_init(&a);
     lv_anim_set_var(&a, overlay);
@@ -464,14 +505,14 @@ static void close_detail_popup(lv_event_t * e)
 }
 
 /**
- * @brief ÏÔÊ¾½»Ò×ÏêÇéµ¯´°
- * @param tx ½»Ò×¼ÇÂ¼Ö¸Õë
+ * @brief æ˜¾ç¤ºäº¤æ˜“è¯¦æƒ…å¼¹çª—
+ * @param tx äº¤æ˜“è®°å½•æŒ‡é’ˆ
  */
 void shop_ui_show_tx_detail(transaction_t * tx)
 {
     if(tx == NULL) return;
 
-    // ´´½¨È«ÆÁ°ëÍ¸Ã÷ÕÚÕÖ
+    // åˆ›å»ºå…¨å±åŠé€æ˜é®ç½©
     lv_obj_t * overlay = lv_obj_create(lv_scr_act());
     lv_obj_set_size(overlay, 1024, 600);
     lv_obj_set_pos(overlay, 0, 0);
@@ -480,10 +521,10 @@ void shop_ui_show_tx_detail(transaction_t * tx)
     lv_obj_clear_flag(overlay, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_event_cb(overlay, close_detail_popup, LV_EVENT_CLICKED, overlay);
 
-    // ÏêÇéµ¯´°
+    // è¯¦æƒ…å¼¹çª—
     lv_obj_t * popup = lv_obj_create(overlay);
     lv_obj_set_size(popup, 500, 450);
-    lv_obj_center(popup);
+    lv_obj_set_pos(popup, 262, 75);
     lv_obj_set_style_bg_color(popup, lv_color_white(), 0);
     lv_obj_set_style_bg_opa(popup, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(popup, 2, 0);
@@ -493,9 +534,9 @@ void shop_ui_show_tx_detail(transaction_t * tx)
     lv_obj_set_style_pad_gap(popup, 6, 0);
     lv_obj_set_style_pad_all(popup, 15, 0);
     lv_obj_clear_flag(popup, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(popup, LV_OBJ_FLAG_CLICKABLE); // ×èÖ¹µã»÷´©Í¸µ½ÕÚÕÖ
+    lv_obj_add_flag(popup, LV_OBJ_FLAG_CLICKABLE); // é˜»æ­¢ç‚¹å‡»ç©¿é€åˆ°é®ç½©
 
-    // ±êÌâ
+    // æ ‡é¢˜
     lv_obj_t * title_lbl = lv_label_create(popup);
     static char title_buf[48];
     snprintf(title_buf, sizeof(title_buf), "%s #%lu", CN_TX_DETAIL, (unsigned long)tx->id);
@@ -503,7 +544,7 @@ void shop_ui_show_tx_detail(transaction_t * tx)
     lv_obj_set_style_text_font(title_lbl, &ziti_title, 0);
     lv_obj_set_style_text_color(title_lbl, lv_palette_main(LV_PALETTE_BLUE), 0);
 
-    // ½ğ¶îĞÅÏ¢
+    // é‡‘é¢ä¿¡æ¯
     lv_obj_t * money_lbl = lv_label_create(popup);
     static char money_buf[256];
     const char * disc_str = get_discount_desc_str(tx->discount_type);
@@ -522,7 +563,7 @@ void shop_ui_show_tx_detail(transaction_t * tx)
     lv_label_set_text(money_lbl, money_buf);
     lv_obj_set_style_text_color(money_lbl, lv_palette_main(LV_PALETTE_RED), 0);
 
-    // ÉÌÆ·Ã÷Ï¸£¨¿É¹ö¶¯£¬ÁĞ²¼¾Ö£©
+    // å•†å“æ˜ç»†ï¼ˆå¯æ»šåŠ¨ï¼Œåˆ—å¸ƒå±€ï¼‰
     lv_obj_t * items_cont = lv_obj_create(popup);
     lv_obj_set_width(items_cont, lv_pct(100));
     lv_obj_set_flex_grow(items_cont, 1);
@@ -548,7 +589,7 @@ void shop_ui_show_tx_detail(transaction_t * tx)
         }
     }
 
-    // È·¶¨/¹Ø±Õ°´Å¥
+    // ç¡®å®š/å…³é—­æŒ‰é’®
     lv_obj_t * close_btn = lv_btn_create(popup);
     lv_obj_set_size(close_btn, lv_pct(60), 40);
     lv_obj_set_style_bg_color(close_btn, lv_palette_main(LV_PALETTE_BLUE), 0);
@@ -557,11 +598,11 @@ void shop_ui_show_tx_detail(transaction_t * tx)
     lv_label_set_text(close_lbl, CN_OK);
     lv_obj_center(close_lbl);
 
-    // µ­Èë¶¯»­
+    // æ·¡å…¥åŠ¨ç”»
     lv_obj_fade_in(overlay, 150, 0);
 }
 
-/* µã»÷½»Ò×ĞĞ ¡ú ÏÔÊ¾ÏêÇéµ¯´°£¨»Øµ÷£© */
+/* ç‚¹å‡»äº¤æ˜“è¡Œ â†’ æ˜¾ç¤ºè¯¦æƒ…å¼¹çª—ï¼ˆå›è°ƒï¼‰ */
 static void hist_list_item_cb(lv_event_t * e)
 {
     int idx = (int)(uintptr_t)lv_event_get_user_data(e);
@@ -569,48 +610,64 @@ static void hist_list_item_cb(lv_event_t * e)
     shop_ui_show_tx_detail(&tx_log.records[idx]);
 }
 
-/* Ë¢ĞÂÀúÊ·ÁĞ±í£¨ÏÔÊ¾È«²¿¼ÇÂ¼£¬×îĞÂÔÚÇ°£© */
+/* åˆ·æ–°å†å²åˆ—è¡¨ï¼ˆæ˜¾ç¤ºå…¨éƒ¨è®°å½•ï¼Œæœ€æ–°åœ¨å‰ï¼‰ */
 void shop_ui_refresh_history_list(void)
 {
     if(hist_list == NULL) return;
 
-    // Çå¿ÕÁĞ±í
     lv_obj_clean(hist_list);
 
     int total = (int)tx_log.count;
 
-    // ÎŞ¼ÇÂ¼ÌáÊ¾
     if(total == 0) {
         lv_obj_t * lbl = lv_label_create(hist_list);
         lv_label_set_text(lbl, CN_TX_EMPTY);
         lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_width(lbl, lv_pct(100));
+        lv_obj_center(lbl);
     } else {
-        // µ¹ĞòÏÔÊ¾£¨×îĞÂÔÚÇ°£©£¬È«²¿¼ÇÂ¼
+        lv_coord_t y = 2;
         for(int i = total - 1; i >= 0; i--) {
             transaction_t * tx = &tx_log.records[i];
 
-            // ¹¹½¨ĞĞÎÄ×Ö: "#½»Ò×¼ÇÂ¼N | MÏîÉÌÆ· | Êµ¸¶: XX.XX Ôª"
             static char line_buf[128];
             if(tx->total_before_discount != tx->total_after_discount) {
                 snprintf(line_buf, sizeof(line_buf),
-                         "%s%lu | %d " CN_TX_ITEMS " | " CN_TX_PAY ": %.2f " CN_YUAN,
+                         "%s%lu | %d%s | %s: %.2f%s",
                          CN_TX_ID, (unsigned long)tx->id, (int)tx->item_count,
-                         tx->total_after_discount);
+                         CN_TX_ITEMS, CN_TX_PAY,
+                         tx->total_after_discount, CN_YUAN);
             } else {
                 snprintf(line_buf, sizeof(line_buf),
-                         "%s%lu | %d " CN_TX_ITEMS " | " CN_TX_TOTAL ": %.2f " CN_YUAN,
+                         "%s%lu | %d%s | %s: %.2f%s",
                          CN_TX_ID, (unsigned long)tx->id, (int)tx->item_count,
-                         tx->total_after_discount);
+                         CN_TX_ITEMS, CN_TX_TOTAL,
+                         tx->total_after_discount, CN_YUAN);
             }
 
-            lv_obj_t * btn = lv_list_add_btn(hist_list, LV_SYMBOL_FILE, line_buf);
-            lv_obj_add_event_cb(btn, hist_list_item_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)i);
+            // è¡Œå®¹å™¨ï¼ˆå¯ç‚¹å‡»ï¼Œä¸æ»šåŠ¨ï¼‰
+            lv_obj_t * row = lv_obj_create(hist_list);
+            lv_obj_set_size(row, 994, 38);
+            lv_obj_set_pos(row, 5, y);
+            lv_obj_set_style_border_width(row, 0, 0);
+            lv_obj_set_style_bg_color(row, lv_color_hex(0xF0F0F0), 0);
+            lv_obj_set_style_radius(row, 6, 0);
+            lv_obj_set_style_pad_all(row, 6, 0);
+            lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+            lv_obj_add_event_cb(row, hist_list_item_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)i);
+
+            lv_obj_t * lbl = lv_label_create(row);
+            lv_label_set_text(lbl, line_buf);
+            lv_obj_set_style_text_font(lbl, &ziti, 0);
+            lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 6, 0);
+
+            y += 42; // 38 + 4 gap
         }
     }
 }
 
-/* ¹Ø±ÕÀúÊ·Ãæ°å */
+/* å…³é—­å†å²é¢æ¿ */
 void shop_ui_close_history_panel(void)
 {
     if(history_screen) {
@@ -619,39 +676,37 @@ void shop_ui_close_history_panel(void)
     }
 }
 
-/* ÏÔÊ¾½»Ò×ÀúÊ·Ãæ°å£¨¶ÀÁ¢È«ÆÁÒ³Ãæ£© */
+/* æ˜¾ç¤ºäº¤æ˜“å†å²é¢æ¿ï¼ˆç‹¬ç«‹å…¨å±é¡µé¢ï¼‰ */
 void show_history_panel(void)
 {
-    // Èç¹ûÒÑ´´½¨£¬Ö±½Ó¼ÓÔØ²¢Ë¢ĞÂÊı¾İ
     if(history_screen) {
         lv_scr_load_anim(history_screen, LV_SCR_LOAD_ANIM_MOVE_LEFT, 300, 0, false);
         shop_ui_refresh_history_list();
         return;
     }
 
-    // ´´½¨ĞÂµÄÆÁÄ»
+    // === å±å¹•ï¼ˆç¦æ­¢æ»šåŠ¨ï¼Œä½œä¸ºå›ºå®šç”»å¸ƒï¼‰ ===
     history_screen = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(history_screen, lv_color_white(), 0);
     lv_obj_set_style_bg_opa(history_screen, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(history_screen, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Ö÷±êÌâ£º½»Ò×Ã÷Ï¸£¨×óÉÏ½Ç£©
+    // === é¡¶éƒ¨å›ºå®šåŒºåŸŸ ===
     lv_obj_t * main_title = lv_label_create(history_screen);
     lv_label_set_text(main_title, CN_TX_DETAIL);
     lv_obj_set_style_text_font(main_title, &ziti_title, 0);
     lv_obj_set_style_text_color(main_title, lv_palette_main(LV_PALETTE_BLUE), 0);
     lv_obj_set_pos(main_title, 20, 15);
 
-    // ·µ»ØÖ÷Ò³°´Å¥£¨ÓÒÉÏ½Ç£©
     lv_obj_t * back_btn = lv_btn_create(history_screen);
     lv_obj_set_size(back_btn, 100, 32);
-    lv_obj_align(back_btn, LV_ALIGN_TOP_RIGHT, -20, 15);
+    lv_obj_set_pos(back_btn, 904, 15);
     lv_obj_set_style_bg_color(back_btn, lv_palette_main(LV_PALETTE_BLUE), 0);
     lv_obj_add_event_cb(back_btn, back_btn_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t * back_lbl = lv_label_create(back_btn);
     lv_label_set_text(back_lbl, CN_BTN_BACK);
     lv_obj_center(back_lbl);
 
-    // ¸±±êÌâ£º×î¶à´¢´æ N Ìõ¼ÇÂ¼
     static char max_buf[48];
     snprintf(max_buf, sizeof(max_buf), CN_MAX_RECORDS, MAX_TX_HISTORY);
     lv_obj_t * subtitle = lv_label_create(history_screen);
@@ -659,26 +714,27 @@ void show_history_panel(void)
     lv_obj_set_style_text_color(subtitle, lv_palette_main(LV_PALETTE_GREY), 0);
     lv_obj_set_pos(subtitle, 20, 55);
 
-    // ÖĞ²¿£º½»Ò×ÁĞ±í£¨¿É¹ö¶¯£¬È«ÆÁ¸ß¶È¼õÈ¥±êÌâºÍ°´Å¥ÇøÓò£©
-    hist_list = lv_list_create(history_screen);
-    lv_obj_set_size(hist_list, lv_pct(100), lv_pct(100) - 120);
-    lv_obj_set_pos(hist_list, 0, 80);
-    lv_obj_set_style_pad_gap(hist_list, 8, 0);
-    lv_obj_set_style_pad_all(hist_list, 10, 0);
+    // === å¯æ»šåŠ¨åˆ—è¡¨åŒºåŸŸï¼ˆæ™®é€šå®¹å™¨ï¼Œæ‰‹åŠ¨å®šä½å­è¡Œï¼‰ ===
+    hist_list = lv_obj_create(history_screen);
+    lv_obj_set_size(hist_list, 1004, 470);
+    lv_obj_set_pos(hist_list, 10, 80);
+    lv_obj_set_style_border_width(hist_list, 0, 0);
+    lv_obj_set_style_bg_opa(hist_list, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_pad_all(hist_list, 0, 0);
+    lv_obj_set_scrollbar_mode(hist_list, LV_SCROLLBAR_MODE_AUTO);
+    lv_obj_set_scroll_dir(hist_list, LV_DIR_VER);
+    lv_obj_clear_flag(hist_list, LV_OBJ_FLAG_SCROLL_CHAIN_VER);
 
-    // µ×²¿£ºÇå¿Õ¼ÇÂ¼°´Å¥£¨¾ÓÖĞ£©
+    // === åº•éƒ¨å›ºå®šåŒºåŸŸ ===
     lv_obj_t * btn_clr = lv_btn_create(history_screen);
     lv_obj_set_size(btn_clr, 120, 36);
-    lv_obj_align(btn_clr, LV_ALIGN_BOTTOM_MID, 0, -15);
+    lv_obj_align(btn_clr, LV_ALIGN_BOTTOM_MID, 0, -10);
     lv_obj_set_style_bg_color(btn_clr, lv_palette_main(LV_PALETTE_RED), 0);
     lv_obj_add_event_cb(btn_clr, hist_clear_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t * lbl_clr = lv_label_create(btn_clr);
     lv_label_set_text(lbl_clr, CN_HISTORY_CLR);
     lv_obj_center(lbl_clr);
 
-    // Ê×´Î¼ÓÔØÊı¾İ
     shop_ui_refresh_history_list();
-
-    // ÇĞ»»µ½ÀúÊ·Ò³Ãæ
     lv_scr_load_anim(history_screen, LV_SCR_LOAD_ANIM_MOVE_LEFT, 300, 0, false);
 }
