@@ -1,6 +1,7 @@
 #include "shop_app.h"
 #include "shop_chinese.h"
 #include "ff.h"
+#include "drivers.h"
 
 // 优惠类型枚举（值与复选框索引对齐）
 typedef enum {
@@ -179,6 +180,7 @@ static void kb_mode_add_to_cart_handler(const char * input_str)
                 break;
         }
         hide_input_ui();
+        led_blink_n(LED_RED, 100, 3);
         return;
     }
 
@@ -186,6 +188,8 @@ static void kb_mode_add_to_cart_handler(const char * input_str)
     shop_ui_add_cart_item(result.item_text, current_product->name);
     shop_ui_update_cart_total();
     hide_input_ui();
+    // 黄灯短闪：添加成功
+    led_blink(LED_YELLOW, 100);
 }
 
 /* 处理"修改数量"模式的确认 */
@@ -211,6 +215,7 @@ static void kb_mode_edit_quantity_handler(const char * input_str)
                 break;
         }
         hide_input_ui();
+        led_blink_n(LED_RED, 100, 3);
         return;
     }
 
@@ -267,6 +272,7 @@ void checkout_btn_event_cb(lv_event_t * e)
     // 1. 检查购物车是否为空（child_cnt <= 1 表示只有标题行或空列表）
     if(child_cnt <= 1) {
         shop_ui_show_msgbox(CN_HINT, CN_CART_EMPTY, NULL);
+        led_blink_n(LED_RED, 100, 3);
         return;
     }
 
@@ -286,12 +292,14 @@ void checkout_btn_event_cb(lv_event_t * e)
     // 3. 总价为0时提示购物车为空
     if(grand_total == 0) {
         shop_ui_show_msgbox(CN_HINT, CN_CART_EMPTY, NULL);
+        led_blink_n(LED_RED, 100, 3);
         return;
     }
 
 		//对grand_total进行打折
 		if (current_discount != DISCOUNT_NONE && coupon_remaining[current_discount] <= 0) {
 		    shop_ui_show_msgbox(CN_HINT, CN_COUPON_USED_UP, NULL);
+		    led_blink_n(LED_RED, 100, 3);
 		    return;
 		}
 
@@ -387,13 +395,16 @@ void checkout_btn_event_cb(lv_event_t * e)
         }
     }
 
-    // 保存交易记录到 RAM + SD 卡
+    // 保存交易记录到 SD 卡
     tx_log_add(&tx);
 
-		// 5. 显示结算结果弹窗
+		// 5. 显示结算结果弹窗（先弹窗，再闪灯，避免迟滞感）
     shop_ui_show_checkout_result(&tx, grand_total, final_total, discount_desc);
-
-    // 6. 延时0.5秒后清空购物车（保留标题）
+    // 蓝灯闪2下：SD写入完成
+    led_blink_n(LED_BLUE, 80, 2);
+    // 绿灯闪两下：结算成功
+    led_blink(LED_GREEN, 150); delay_us(100000);
+    led_blink(LED_GREEN, 150);
     lv_timer_t * t = lv_timer_create(clear_cart_timer_cb, 500, NULL);
     lv_timer_set_repeat_count(t, 1);
 }

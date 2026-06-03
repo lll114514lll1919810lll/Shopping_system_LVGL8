@@ -1,6 +1,7 @@
 #include "shop_app.h"
 #include "shop_chinese.h"
 #include "ff.h"
+#include "drivers.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -69,6 +70,7 @@ int tx_log_save_to_sd(void)
     FIL file;
     FRESULT res;
     UINT bytes_written;
+    led_blink_n(LED_BLUE, 80, 2);
 
     // 每次都重写整个文件（保证文件内容与 RAM 缓存一致）
     res = f_open(&file, TX_LOG_FILE, FA_WRITE | FA_CREATE_ALWAYS);
@@ -133,6 +135,7 @@ int tx_log_load_from_sd(void)
     FRESULT res;
     UINT bytes_read;
     char file_buf[8192]; // 足够容纳 20 条记录
+    led_blink_n(LED_BLUE, 80, 2);
 
     res = f_open(&file, TX_LOG_FILE, FA_READ);
     if(res != FR_OK) {

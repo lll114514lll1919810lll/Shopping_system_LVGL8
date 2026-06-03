@@ -15,6 +15,21 @@
 #define COUPON_CONFIG_FILE   "0:/coupon.dat"
 #define PRICE_CONFIG_FILE    "0:/price.dat"
 
+/* ==================== LED 引脚定义 ==================== */
+// 开发板 4 个 LED（从上到下：绿 蓝 黄 红）
+#define LED_GREEN   GPIO_PIN_0      // PA0 - 绿色（最上面）
+#define LED_BLUE    GPIO_PIN_1      // PA1 - 蓝色（第二个）
+#define LED_YELLOW  GPIO_PIN_2      // PA2 - 黄色（第三个）
+#define LED_RED     GPIO_PIN_3      // PA3 - 红色（最下面）
+#define LED_ALL     (LED_GREEN | LED_BLUE | LED_YELLOW | LED_RED)
+
+// LED 控制便捷宏（低电平点亮，需先开启 RCU_GPIOA 时钟）
+#define led_on(pin)      gpio_bit_reset(GPIOA, (pin))
+#define led_off(pin)     gpio_bit_set(GPIOA, (pin))
+#define led_toggle(pin)  gpio_bit_toggle(GPIOA, (pin))
+#define led_blink(pin, ms)    do { led_on(pin); delay_us((ms)*1000); led_off(pin); } while(0)
+#define led_blink_n(pin, ms, n) do { for(int _i_=0; _i_<(n); _i_++) { led_on(pin); delay_us((ms)*1000); led_off(pin); if(_i_<(n)-1) delay_us((ms)*500); } } while(0)
+
 /* ==================== 数据结构定义 ==================== */
 
 // 1. 商品结构体
