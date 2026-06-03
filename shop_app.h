@@ -64,9 +64,6 @@ typedef enum {
     KB_MODE_NONE = 0,           // 空闲，无输入
     KB_MODE_ADD_TO_CART,        // 添加商品到购物车
     KB_MODE_EDIT_QUANTITY,      // 修改购物车中商品数量
-    // 可扩展更多模式：
-    // KB_MODE_SET_PRICE,       // 手动设置价格
-    // KB_MODE_INPUT_ID,        // 输入商品ID
 } kb_input_mode_t;
 
 /* ==================== 全局变量声明 ==================== */
@@ -123,8 +120,8 @@ void show_coupon_mgmt_screen(void);                         // 显示优惠券�
 void shop_ui_close_coupon_mgmt_screen(void);                // 关闭优惠券管理界面
 
 /* ==================== 价格管理界面 ==================== */
-void show_price_mgmt_screen(void);
-void shop_ui_close_price_mgmt_screen(void);
+void show_price_mgmt_screen(void);                              // 显示价格管理界面
+void shop_ui_close_price_mgmt_screen(void);                     // 关闭价格管理界面
 
 /* ==================== 价格配置持久化 ==================== */
 void price_config_load(void);                              // 从SD卡加载商品价格
@@ -146,9 +143,9 @@ lv_obj_t * shop_ui_show_cart_action_menu(void);
 lv_obj_t * shop_ui_get_cart_delete_btn(void);              // 获取购物车操作菜单的删除按钮
 lv_obj_t * shop_ui_get_cart_edit_btn(void);                // 获取购物车操作菜单的修改按钮
 void shop_ui_close_cart_menu(void);                        // 关闭购物车操作菜单
-void shop_ui_close_history_panel(void);
-void shop_ui_refresh_history_list(void);
-void shop_ui_show_tx_detail(transaction_t * tx);
-void shop_ui_update_cart_total(void);
+void shop_ui_close_history_panel(void);                          // 关闭交易历史面板
+void shop_ui_refresh_history_list(void);                         // 刷新交易历史列表
+void shop_ui_show_tx_detail(transaction_t * tx);                 // 显示交易明细
+void shop_ui_update_cart_total(void);                            // 更新购物车总价显示
 
 #endif

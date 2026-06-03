@@ -70,7 +70,7 @@
 #define CN_DESC_DISC_90PCT         " (9" "\xe6\x8a\x98" ")"                                        //  (9折)
 #define CN_DESC_DISC_FULL100_80PCT " (\xe6\xbb\xa1" "100" "\xe6\x89\x93" "8" "\xe6\x8a\x98" ")"    //  (满100打8折)
 #define CN_DESC_DISC_FULL200_RED50 " (\xe6\xbb\xa1" "200" "\xe5\x87\x8f" "50" ")"                  //  (满200减50)
-#define CN_DESC_DISC_NONE          ""                                                              // // (无折扣时不显示)
+#define CN_DESC_DISC_NONE          ""                                                              // (无折扣时不显示)
 
 // 交易记录界面
 #define CN_HISTORY     "\xe4\xba\xa4\xe6\x98\x93\xe8\xae\xb0\xe5\xbd\x95"  // 交易记录

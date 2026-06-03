@@ -129,7 +129,7 @@ void show_home_screen(void)
     lv_obj_set_style_text_font(lbl_price, &ziti_max, 0);
     lv_obj_center(lbl_price);
 
-    // coupon management button
+    // 优惠券管理按钮
     lv_obj_t * btn_manage = lv_btn_create(home_screen);
     lv_obj_set_size(btn_manage, 200, 80);
     lv_obj_align(btn_manage, LV_ALIGN_CENTER, 120, 200);
@@ -303,7 +303,7 @@ void show_shop_screen(void)
     lv_label_set_text(lbl_clear, CN_CLEAR);
     lv_obj_center(lbl_clear);
 
-    // 5b. 返回主页按钮（替代原来的交易记录按钮）
+    // 返回主页按钮
     lv_obj_t * btn_back = lv_btn_create(shop_screen);
     lv_obj_set_size(btn_back, 110, 50);
     lv_obj_set_pos(btn_back, 900, 530);

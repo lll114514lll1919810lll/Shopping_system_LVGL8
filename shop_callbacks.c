@@ -243,12 +243,7 @@ void kb_event_cb(lv_event_t * e)
             case KB_MODE_EDIT_QUANTITY:
                 kb_mode_edit_quantity_handler(input_str);
                 break;
-            
-            // 可扩展更多模式处理：
-            // case KB_MODE_SET_PRICE:
-            //     kb_mode_set_price_handler(input_str);
-            //     break;
-            
+
             case KB_MODE_NONE:
             default:
                 hide_input_ui();
