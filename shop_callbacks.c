@@ -1,5 +1,6 @@
 #include "shop_app.h"
 #include "shop_chinese.h"
+#include "ff.h"
 
 // 优惠类型枚举（值与复选框索引对齐）
 typedef enum {
@@ -37,6 +38,7 @@ static void clear_cart_timer_cb(lv_timer_t * timer)
             lv_obj_del(lv_obj_get_child(cart_list, i));
         }
     }
+    shop_ui_update_cart_total();
 }
 
 void product_btn_event_cb(lv_event_t * e)
@@ -182,6 +184,7 @@ static void kb_mode_add_to_cart_handler(const char * input_str)
 
     // 添加到购物车
     shop_ui_add_cart_item(result.item_text, current_product->name);
+    shop_ui_update_cart_total();
     hide_input_ui();
 }
 
@@ -213,6 +216,7 @@ static void kb_mode_edit_quantity_handler(const char * input_str)
 
     // 更新购物车中的商品项
     shop_ui_add_cart_item(result.item_text, current_product->name);
+    shop_ui_update_cart_total();
 
     hide_input_ui();
 }
@@ -332,6 +336,7 @@ void checkout_btn_event_cb(lv_event_t * e)
     if (current_discount != DISCOUNT_NONE && discount_desc[0] != '\0') {
         coupon_remaining[current_discount]--;
         shop_ui_update_coupon_display();
+            coupon_config_save();  // 持久化到SD卡
         if (coupon_remaining[current_discount] <= 0) {
             lv_obj_clear_state(discount_checkboxes[current_discount], LV_STATE_CHECKED);
             lv_obj_add_state(discount_checkboxes[DISCOUNT_NONE], LV_STATE_CHECKED);
@@ -409,6 +414,7 @@ void clear_btn_event_cb(lv_event_t * e)
             lv_obj_del(child);
         }
     }
+    shop_ui_update_cart_total();
 }
 
 // --- E. 空白区域点击隐藏键盘等 ---
@@ -506,6 +512,7 @@ static void cart_action_btnmatrix_cb(lv_event_t * e)
     if(sel == 0) {
         /* 删除商品 */
         lv_obj_del(list_btn);
+        shop_ui_update_cart_total();
     } else if(sel == 1) {
         /* 修改数量：根据按钮文本查找对应商品并进入编辑模式 */
         const char * text = lv_list_get_btn_text(cart_list, list_btn);
@@ -543,4 +550,57 @@ void history_btn_event_cb(lv_event_t * e)
     if(lv_event_get_code(e) == LV_EVENT_CLICKED) {
         show_history_panel();
     }
+}
+
+// ==================== 优惠券配置持久化 ====================
+
+/* 从 SD 卡加载优惠券数量 */
+void coupon_config_load(void)
+{
+    FIL file;
+    FRESULT res;
+    UINT bytes_read;
+    char buf[64];
+
+    res = f_open(&file, COUPON_CONFIG_FILE, FA_READ);
+    if(res != FR_OK) return;  // 文件不存在是正常的（首次使用）
+
+    FSIZE_t file_size = f_size(&file);
+    if(file_size >= sizeof(buf)) {
+        f_close(&file);
+        return;
+    }
+
+    res = f_read(&file, buf, (UINT)file_size, &bytes_read);
+    f_close(&file);
+    if(res != FR_OK || bytes_read == 0) return;
+
+    buf[bytes_read] = '\0';
+
+    // 解析格式: -1,10,10,10,10
+    char * p = buf;
+    for (int i = 0; i < 5; i++) {
+        coupon_remaining[i] = (int)strtol(p, &p, 10);
+        if (*p == ',') p++;
+    }
+}
+
+/* 保存优惠券数量到 SD 卡 */
+void coupon_config_save(void)
+{
+    FIL file;
+    FRESULT res;
+    UINT bytes_written;
+    char buf[64];
+
+    snprintf(buf, sizeof(buf), "%d,%d,%d,%d,%d\r\n",
+             coupon_remaining[0], coupon_remaining[1],
+             coupon_remaining[2], coupon_remaining[3],
+             coupon_remaining[4]);
+
+    res = f_open(&file, COUPON_CONFIG_FILE, FA_WRITE | FA_CREATE_ALWAYS);
+    if(res != FR_OK) return;
+
+    f_write(&file, buf, strlen(buf), &bytes_written);
+    f_close(&file);
 }

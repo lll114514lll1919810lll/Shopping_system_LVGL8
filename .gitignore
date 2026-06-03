@@ -16,8 +16,8 @@ Listings/
 .vscode/
 /back.h
 .github/
-/lvgl/demos/
 *.uvoptx
+*.bak
 
 # Claude Code
 .claude/

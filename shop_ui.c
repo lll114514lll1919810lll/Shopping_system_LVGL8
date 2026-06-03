@@ -38,11 +38,22 @@ static lv_img_dsc_t img_dscs[MAX_PRODUCTS]; // 存储图片描述符
 static lv_obj_t * home_screen = NULL;        // 主页屏幕引用
 static lv_obj_t * shop_screen = NULL;        // 购物界面屏幕引用
 static lv_obj_t * history_screen = NULL;     // 交易历史页面
+static lv_obj_t * coupon_mgmt_screen = NULL; // 优惠券管理页面
+static lv_obj_t * coupon_count_labels[4] = {NULL}; // 管理页面中4种优惠券的数量标签
+static lv_obj_t * cart_total_label = NULL;   // 购物车实时总价标签
+
+// 主页背景图片
+static lv_img_dsc_t bg_img_dsc;
+static uint8_t * bg_img_buffer = NULL;
 
 // 前向声明
 static void shop_btn_cb(lv_event_t * e);
 static void history_btn_home_cb(lv_event_t * e);
 static void back_btn_cb(lv_event_t * e);
+static void coupon_mgmt_btn_home_cb(lv_event_t * e);
+static void coupon_mgmt_plus_minus_cb(lv_event_t * e);
+static void coupon_mgmt_reset_cb(lv_event_t * e);
+static void shop_ui_update_coupon_mgmt_display(void);
 
 /* 创建主页 */
 void show_home_screen(void)
@@ -58,12 +69,24 @@ void show_home_screen(void)
     lv_obj_set_style_bg_color(home_screen, lv_color_white(), 0);
     lv_obj_set_style_bg_opa(home_screen, LV_OPA_COVER, 0);
 
-    // 主标题：交易明细（左上角）
-    lv_obj_t * title = lv_label_create(home_screen);
-    lv_label_set_text(title, CN_HOME_TITLE);
-    lv_obj_set_style_text_font(title, &ziti_title, 0);
-    lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_BLUE), 0);
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 150);
+    // 加载主页背景图片 (1024x600)
+    if (bg_img_buffer == NULL) {
+        uint32_t bg_data_size = 1024 * 600 * 2;   // RGB565
+        uint32_t bg_file_size = bg_data_size + 4;  // +4 byte LVGL header
+        bg_img_buffer = (uint8_t *)sdram_malloc(bg_file_size);
+        read_file_to_array("0:/background.bin", bg_img_buffer, bg_file_size);
+        bg_img_dsc.header.always_zero = 0;
+        bg_img_dsc.header.cf = LV_IMG_CF_TRUE_COLOR;
+        bg_img_dsc.header.w = 1024;
+        bg_img_dsc.header.h = 600;
+        bg_img_dsc.data_size = bg_data_size;
+        bg_img_dsc.data = bg_img_buffer + 4;
+    }
+    lv_obj_t * bg_img = lv_img_create(home_screen);
+    lv_img_set_src(bg_img, &bg_img_dsc);
+    lv_obj_set_size(bg_img, 1024, 600);
+    lv_obj_set_pos(bg_img, 0, 0);
+    lv_obj_move_background(bg_img);  // 置于最底层
 
     // 购物按钮
     lv_obj_t * btn_shop = lv_btn_create(home_screen);
@@ -73,7 +96,7 @@ void show_home_screen(void)
     lv_obj_add_event_cb(btn_shop, shop_btn_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t * lbl_shop = lv_label_create(btn_shop);
     lv_label_set_text(lbl_shop, CN_BTN_SHOP);
-    lv_obj_set_style_text_font(lbl_shop, &ziti_title, 0);
+    lv_obj_set_style_text_font(lbl_shop, &ziti_max, 0);
     lv_obj_center(lbl_shop);
 
     // 交易记录按钮
@@ -84,8 +107,19 @@ void show_home_screen(void)
     lv_obj_add_event_cb(btn_history, history_btn_home_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t * lbl_history = lv_label_create(btn_history);
     lv_label_set_text(lbl_history, CN_BTN_HISTORY);
-    lv_obj_set_style_text_font(lbl_history, &ziti_title, 0);
+    lv_obj_set_style_text_font(lbl_history, &ziti_max, 0);
     lv_obj_center(lbl_history);
+
+    // coupon management button
+    lv_obj_t * btn_manage = lv_btn_create(home_screen);
+    lv_obj_set_size(btn_manage, 200, 80);
+    lv_obj_align(btn_manage, LV_ALIGN_CENTER, 0, 160);
+    lv_obj_set_style_bg_color(btn_manage, lv_palette_main(LV_PALETTE_ORANGE), 0);
+    lv_obj_add_event_cb(btn_manage, coupon_mgmt_btn_home_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t * lbl_manage = lv_label_create(btn_manage);
+    lv_label_set_text(lbl_manage, CN_COUPON_MGMT);
+    lv_obj_set_style_text_font(lbl_manage, &ziti_max, 0);
+    lv_obj_center(lbl_manage);
 
     // 切换到主页
     lv_scr_load_anim(home_screen, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 300, 0, false);
@@ -119,6 +153,7 @@ void show_shop_screen(void)
     // 避免重复创建
     if(shop_screen) {
         lv_scr_load_anim(shop_screen, LV_SCR_LOAD_ANIM_MOVE_LEFT, 300, 0, false);
+        shop_ui_update_coupon_display();
         return;
     }
 
@@ -188,7 +223,7 @@ void show_shop_screen(void)
 
     // 3. 右侧购物车
     cart_list = lv_list_create(shop_screen);
-    lv_obj_set_size(cart_list, 240, 450);
+    lv_obj_set_size(cart_list, 240, 425);
     lv_obj_set_pos(cart_list, 540, 10);
     lv_obj_set_style_pad_gap(cart_list, 12, 0);
     lv_obj_set_style_pad_all(cart_list, 10, 0);
@@ -199,6 +234,14 @@ void show_shop_screen(void)
     lv_obj_set_style_text_font(cart_title, &ziti_title, 0);
     lv_obj_set_style_text_align(cart_title, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_width(cart_title, lv_pct(100));
+
+    // 购物车底部实时总价标签
+    cart_total_label = lv_label_create(shop_screen);
+    lv_obj_set_pos(cart_total_label, 550, 440);
+    lv_obj_set_width(cart_total_label, 220);
+    lv_obj_set_style_text_font(cart_total_label, &ziti_title, 0);
+    lv_obj_set_style_text_align(cart_total_label, LV_TEXT_ALIGN_CENTER, 0);
+    lv_label_set_text(cart_total_label, CN_CART_TOTAL "0.00 " CN_YUAN);
 
     // 4. 输入框与键盘
     input_ta = lv_textarea_create(shop_screen);
@@ -277,6 +320,9 @@ void show_shop_screen(void)
             char buf[64];
             snprintf(buf, sizeof(buf), CN_COUPON_REMAINING, discount_base_texts[i], coupon_remaining[i]);
             lv_checkbox_set_text(cb, buf);
+            // 根据剩余数量设置文字颜色（>0绿色，=0红色）
+            lv_obj_set_style_text_color(cb,
+                coupon_remaining[i] > 0 ? lv_color_hex(0x00C800) : lv_palette_main(LV_PALETTE_RED), LV_PART_MAIN);
             if (coupon_remaining[i] <= 0) {
                 lv_obj_add_state(cb, LV_STATE_DISABLED);
             }
@@ -293,6 +339,9 @@ void show_shop_screen(void)
         current_discount = 0;
     }
 
+    // 初始应用门槛检查和颜色状态
+    shop_ui_update_coupon_display();
+
     // 切换到购物界面
     lv_scr_load_anim(shop_screen, LV_SCR_LOAD_ANIM_MOVE_LEFT, 300, 0, false);
 }
@@ -306,30 +355,275 @@ void shop_ui_close_shop_screen(void)
         input_ta = NULL;
         num_kb = NULL;
         label_full = NULL;
+        cart_total_label = NULL;
     }
 }
 
-/* 更新所有优惠券复选框的显示（剩余数量和禁用状态） */
+/* 计算购物车当前总价（跳过标题行，解析 "=" 后价格累加） */
+static float get_cart_total(void)
+{
+    if(cart_list == NULL) return 0.0f;
+
+    float total = 0.0f;
+    uint32_t child_cnt = lv_obj_get_child_cnt(cart_list);
+
+    for(uint32_t i = 1; i < child_cnt; i++) {
+        lv_obj_t * child = lv_obj_get_child(cart_list, i);
+        const char * text = lv_list_get_btn_text(cart_list, child);
+        if(text) {
+            const char * eq = strchr(text, '=');
+            if(eq) {
+                total += (float)atof(eq + 1);
+            }
+        }
+    }
+    return total;
+}
+
+/* 更新购物车底部实时总价显示 */
+void shop_ui_update_cart_total(void)
+{
+    if(cart_total_label == NULL) return;
+
+    float total = get_cart_total();
+
+    // 根据总价设置颜色：>0红色高亮，=0灰色
+    // 手动拆分整数/小数，避免嵌入式 printf 不支持 %f
+    static char total_buf[64];
+    if(total > 0.0f) {
+        lv_obj_set_style_text_color(cart_total_label, lv_palette_main(LV_PALETTE_RED), 0);
+        int yuan = (int)total;
+        int fen  = (int)((total - (float)yuan) * 100.0f + 0.5f);
+        snprintf(total_buf, sizeof(total_buf), CN_CART_TOTAL "%d.%02d " CN_YUAN, yuan, fen);
+    } else {
+        lv_obj_set_style_text_color(cart_total_label, lv_palette_main(LV_PALETTE_GREY), 0);
+        snprintf(total_buf, sizeof(total_buf), CN_CART_TOTAL "0.00 " CN_YUAN);
+    }
+    lv_label_set_text(cart_total_label, total_buf);
+
+    // 联动刷新优惠券可用性（门槛基于当前总价）
+    shop_ui_update_coupon_display();
+}
+
+/* 更新所有优惠券复选框的显示（剩余数量 + 门槛可用性） */
 void shop_ui_update_coupon_display(void)
 {
+    // 优惠券门槛：[0]无优惠=0, [1]满20减5=20, [2]9折=0(无门槛), [3]满100打8折=100, [4]满200减50=200
+    static const float disc_thresholds[5] = {0, 20.0f, 0, 100.0f, 200.0f};
+    float cart_total = get_cart_total();
+
     for (int i = 0; i < 5; i++) {
         lv_obj_t * cb = discount_checkboxes[i];
         if (cb == NULL) continue;
         char buf[64];
         if (i == 0) {
+            // "无优惠"始终可用（不显示剩余数量）
             lv_checkbox_set_text(cb, discount_base_texts[i]);
+            lv_obj_clear_state(cb, LV_STATE_DISABLED);
+            lv_obj_set_style_text_color(cb, lv_color_hex(0x333333), LV_PART_MAIN);
         } else {
+            bool meets_threshold = (disc_thresholds[i] == 0 || cart_total >= disc_thresholds[i]);
+            bool has_remaining   = (coupon_remaining[i] > 0);
+            bool is_available    = meets_threshold && has_remaining;
+
             snprintf(buf, sizeof(buf), CN_COUPON_REMAINING, discount_base_texts[i], coupon_remaining[i]);
             lv_checkbox_set_text(cb, buf);
-            if (coupon_remaining[i] <= 0) {
-                lv_obj_add_state(cb, LV_STATE_DISABLED);
-            } else {
+
+            if (is_available) {
+                // 满足门槛且有余量：绿色可选中
                 lv_obj_clear_state(cb, LV_STATE_DISABLED);
+                lv_obj_set_style_text_color(cb, lv_color_hex(0x00C800), LV_PART_MAIN);
+            } else if (!has_remaining) {
+                // 已用完：红色禁用
+                lv_obj_add_state(cb, LV_STATE_DISABLED);
+                lv_obj_set_style_text_color(cb, lv_palette_main(LV_PALETTE_RED), LV_PART_MAIN);
+            } else {
+                // 有余量但不满足门槛：灰色禁用
+                lv_obj_add_state(cb, LV_STATE_DISABLED);
+                lv_obj_set_style_text_color(cb, lv_palette_main(LV_PALETTE_GREY), LV_PART_MAIN);
             }
+        }
+    }
+
+    // 当前选中的优惠券若不再可用，自动回退到"无优惠"
+    if (current_discount > 0 && current_discount < 5) {
+        bool meets = (disc_thresholds[current_discount] == 0 || cart_total >= disc_thresholds[current_discount]);
+        if (!meets || coupon_remaining[current_discount] <= 0) {
+            lv_obj_clear_state(discount_checkboxes[current_discount], LV_STATE_CHECKED);
+            lv_obj_add_state(discount_checkboxes[0], LV_STATE_CHECKED);
+            current_discount = 0;
         }
     }
 }
 
+/* 优惠券管理主页按钮回调 */
+static void coupon_mgmt_btn_home_cb(lv_event_t * e)
+{
+    (void)e;
+    show_coupon_mgmt_screen();
+}
+
+/* 更新优惠券管理页面的数量显示 */
+static void shop_ui_update_coupon_mgmt_display(void)
+{
+    for (int i = 0; i < 4; i++) {
+        lv_obj_t * lbl = coupon_count_labels[i];
+        if (lbl == NULL) continue;
+        int idx = i + 1;  // coupon_remaining index (1-4)
+        lv_label_set_text_fmt(lbl, CN_CUR_QTY_FMT, coupon_remaining[idx]);
+    }
+}
+
+/* +/- 按钮回调：修改优惠券数量 */
+static void coupon_mgmt_plus_minus_cb(lv_event_t * e)
+{
+    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
+
+    lv_obj_t * btn = lv_event_get_target(e);
+    int coupon_idx = (int)(uintptr_t)lv_event_get_user_data(e);
+    if (coupon_idx < 1 || coupon_idx > 4) return;
+
+    // 通过按钮的第一个子对象（标签）的文本判断是 + 还是 -
+    lv_obj_t * lbl = lv_obj_get_child(btn, 0);
+    if (lbl == NULL) return;
+    const char * txt = lv_label_get_text(lbl);
+    if (txt == NULL) return;
+
+    if (txt[0] == '+') {
+        if (coupon_remaining[coupon_idx] < 999) {
+            coupon_remaining[coupon_idx]++;
+        }
+    } else if (txt[0] == '-') {
+        if (coupon_remaining[coupon_idx] > 0) {
+            coupon_remaining[coupon_idx]--;
+        }
+    }
+
+    shop_ui_update_coupon_mgmt_display();
+    shop_ui_update_coupon_display();
+    coupon_config_save();  // 持久化到SD卡
+}
+
+/* 重置按钮回调：全部恢复为10张 */
+static void coupon_mgmt_reset_cb(lv_event_t * e)
+{
+    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
+
+    for (int i = 1; i <= 4; i++) {
+        coupon_remaining[i] = 10;
+    }
+
+    shop_ui_update_coupon_mgmt_display();
+    shop_ui_update_coupon_display();
+    coupon_config_save();  // 持久化到SD卡
+}
+
+/* 关闭优惠券管理界面 */
+void shop_ui_close_coupon_mgmt_screen(void)
+{
+    if (coupon_mgmt_screen) {
+        coupon_mgmt_screen = NULL;
+        for (int i = 0; i < 4; i++) {
+            coupon_count_labels[i] = NULL;
+        }
+    }
+}
+
+/* 显示优惠券管理界面 */
+void show_coupon_mgmt_screen(void)
+{
+    if (coupon_mgmt_screen) {
+        lv_scr_load_anim(coupon_mgmt_screen, LV_SCR_LOAD_ANIM_MOVE_LEFT, 300, 0, false);
+        shop_ui_update_coupon_mgmt_display();
+        return;
+    }
+
+    // 创建管理界面屏幕
+    coupon_mgmt_screen = lv_obj_create(NULL);
+    lv_obj_set_style_bg_color(coupon_mgmt_screen, lv_color_white(), 0);
+    lv_obj_set_style_bg_opa(coupon_mgmt_screen, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(coupon_mgmt_screen, LV_OBJ_FLAG_SCROLLABLE);
+
+    // 标题
+    lv_obj_t * title = lv_label_create(coupon_mgmt_screen);
+    lv_label_set_text(title, CN_COUPON_MGMT);
+    lv_obj_set_style_text_font(title, &ziti_title, 0);
+    lv_obj_set_style_text_color(title, lv_palette_main(LV_PALETTE_BLUE), 0);
+    lv_obj_set_pos(title, 20, 15);
+
+    // 返回主页按钮
+    lv_obj_t * back_btn = lv_btn_create(coupon_mgmt_screen);
+    lv_obj_set_size(back_btn, 100, 32);
+    lv_obj_set_pos(back_btn, 904, 15);
+    lv_obj_set_style_bg_color(back_btn, lv_palette_main(LV_PALETTE_BLUE), 0);
+    lv_obj_add_event_cb(back_btn, back_btn_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t * back_lbl = lv_label_create(back_btn);
+    lv_label_set_text(back_lbl, CN_BTN_BACK);
+    lv_obj_center(back_lbl);
+
+    // 4种优惠券行（索引1-4对应 coupon_remaining[1]~[4]）
+    for (int i = 0; i < 4; i++) {
+        int coupon_idx = i + 1;
+        int y = 110 + i * 90;
+
+        // 行容器
+        lv_obj_t * row = lv_obj_create(coupon_mgmt_screen);
+        lv_obj_set_size(row, 880, 72);
+        lv_obj_set_pos(row, 72, y);
+        lv_obj_set_style_border_width(row, 0, 0);
+        lv_obj_set_style_bg_color(row, lv_color_hex(0xF5F5F5), 0);
+        lv_obj_set_style_radius(row, 8, 0);
+        lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+
+        // 优惠券名称标签
+        lv_obj_t * name_lbl = lv_label_create(row);
+        lv_label_set_text(name_lbl, discount_base_texts[coupon_idx]);
+        lv_obj_set_style_text_font(name_lbl, &ziti_title, 0);
+        lv_obj_align(name_lbl, LV_ALIGN_LEFT_MID, 20, 0);
+
+        // 数量标签
+        lv_obj_t * count_lbl = lv_label_create(row);
+        coupon_count_labels[i] = count_lbl;
+        lv_obj_set_style_text_font(count_lbl, &ziti_title, 0);
+        lv_obj_set_style_text_color(count_lbl, lv_palette_main(LV_PALETTE_BLUE), 0);
+        lv_label_set_text_fmt(count_lbl, CN_CUR_QTY_FMT, coupon_remaining[coupon_idx]);
+        lv_obj_align(count_lbl, LV_ALIGN_RIGHT_MID, -195, 0);
+
+        // "-" 按钮
+        lv_obj_t * minus_btn = lv_btn_create(row);
+        lv_obj_set_size(minus_btn, 55, 42);
+        lv_obj_align(minus_btn, LV_ALIGN_RIGHT_MID, -120, 0);
+        lv_obj_set_style_bg_color(minus_btn, lv_palette_main(LV_PALETTE_RED), 0);
+        lv_obj_add_event_cb(minus_btn, coupon_mgmt_plus_minus_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)coupon_idx);
+        lv_obj_t * minus_lbl = lv_label_create(minus_btn);
+        lv_label_set_text(minus_lbl, "-");
+        lv_obj_center(minus_lbl);
+
+        // "+" 按钮
+        lv_obj_t * plus_btn = lv_btn_create(row);
+        lv_obj_set_size(plus_btn, 55, 42);
+        lv_obj_align(plus_btn, LV_ALIGN_RIGHT_MID, -50, 0);
+        lv_obj_set_style_bg_color(plus_btn, lv_palette_main(LV_PALETTE_GREEN), 0);
+        lv_obj_add_event_cb(plus_btn, coupon_mgmt_plus_minus_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)coupon_idx);
+        lv_obj_t * plus_lbl = lv_label_create(plus_btn);
+        lv_label_set_text(plus_lbl, "+");
+        lv_obj_center(plus_lbl);
+    }
+
+    // 底部重置按钮
+    lv_obj_t * reset_btn = lv_btn_create(coupon_mgmt_screen);
+    lv_obj_set_size(reset_btn, 200, 45);
+    lv_obj_align(reset_btn, LV_ALIGN_BOTTOM_MID, 0, -30);
+    lv_obj_set_style_bg_color(reset_btn, lv_palette_main(LV_PALETTE_ORANGE), 0);
+    lv_obj_add_event_cb(reset_btn, coupon_mgmt_reset_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t * reset_lbl = lv_label_create(reset_btn);
+    lv_label_set_text(reset_lbl, CN_RESET_DEFAULT);
+    lv_obj_set_style_text_font(reset_lbl, &ziti, 0);
+    lv_obj_center(reset_lbl);
+
+    // 切换到管理界面
+    lv_scr_load_anim(coupon_mgmt_screen, LV_SCR_LOAD_ANIM_MOVE_LEFT, 300, 0, false);
+}
 /* 初始化UI（显示主页） */
 void shop_ui_init(void)
 {

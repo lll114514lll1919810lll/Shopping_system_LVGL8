@@ -12,6 +12,7 @@
 #define MAX_TX_HISTORY       30     // 历史交易记录最大条数
 #define MAX_TX_ITEMS_PER_TX  10     // 单笔交易最多明细项数
 #define TX_LOG_FILE          "0:/transactions.csv"
+#define COUPON_CONFIG_FILE   "0:/coupon.dat"
 
 /* ==================== 数据结构定义 ==================== */
 
@@ -82,6 +83,7 @@ extern int current_discount;                 // 当前选中的优惠类型
 /* ==================== 字体声明 ==================== */
 extern const lv_font_t ziti;                // 14px中文小字体
 extern const lv_font_t ziti_title;          // 18px中文标题字体
+extern const lv_font_t ziti_max;            // 24px中文大字体
 
 /* ==================== 核心功能函数原型 ==================== */
 
@@ -116,6 +118,14 @@ void show_history_panel(void);                              // 显示交易历�
 void history_btn_event_cb(lv_event_t * e);                  // 交易记录按钮回调
 void shop_ui_close_shop_screen(void);                       // 关闭购物界面
 
+/* ==================== 优惠券管理界面 ==================== */
+void show_coupon_mgmt_screen(void);                         // 显示优惠券管理界面
+void shop_ui_close_coupon_mgmt_screen(void);                // 关闭优惠券管理界面
+
+/* ==================== 优惠券配置持久化 ==================== */
+void coupon_config_load(void);                              // 从SD卡加载优惠券数量
+void coupon_config_save(void);                              // 保存优惠券数量到SD卡
+
 /* ==================== 底层接口 ==================== */
 extern void * sdram_malloc(uint32_t size);
 extern void read_file_to_array(const char *filename, void *array, uint32_t size);
@@ -128,5 +138,6 @@ lv_obj_t * shop_ui_show_cart_action_menu(void);
 void shop_ui_close_history_panel(void);
 void shop_ui_refresh_history_list(void);
 void shop_ui_show_tx_detail(transaction_t * tx);
+void shop_ui_update_cart_total(void);
 
 #endif

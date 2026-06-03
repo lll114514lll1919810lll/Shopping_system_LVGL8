@@ -18,7 +18,10 @@ int main()
     
     // 初始化交易记录系统（从SD卡加载历史记录）
     tx_log_init();
-    
+
+    // 加载优惠券配置（从SD卡恢复优惠券数量）
+    coupon_config_load();
+
     shop_ui_init(); 
 
     while(1){
