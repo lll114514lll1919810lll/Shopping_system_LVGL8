@@ -128,8 +128,8 @@ static input_result_t validate_and_parse_input(const char * input_str, const pro
         result.quantity = 9999;
     }
     
-    // 计算总价
-    result.total_price = result.quantity * (float)product->price;
+    // 计算总价（price 存储单位为分，需除以100得到元）
+    result.total_price = result.quantity * ((float)product->price / 100.0f);
     
     // 构建购物车项文本
     snprintf(result.item_text, sizeof(result.item_text), 
@@ -633,7 +633,7 @@ void price_config_load(void)
     char * p = buf;
     for (int i = 0; i < MAX_PRODUCTS; i++) {
         uint32_t price = (uint32_t)strtol(p, &p, 10);
-        if (price > 0 && price < 999) {
+        if (price > 0 && price < 99999) {
             shop_products[i].price = price;
         }
         if (*p == ',') p++;

@@ -21,12 +21,12 @@ void * sdram_malloc(uint32_t size) {
 
 // 商品数据定义
 product_t shop_products[MAX_PRODUCTS] = {
-    {0, CN_APPLE,      8,  "kg",        "0:/apple.bin"},
-    {1, CN_MILK,       6,  CN_BOX,      "0:/milk.bin"},
-    {2, CN_BREAD,      10, CN_PACK,     "0:/bread.bin"},
-    {3, CN_WATERMELON, 3,  "kg",        "0:/watermelon.bin"},
-    {4, CN_COLA,       3,  CN_BOTTLE,   "0:/cola.bin"},
-    {5, CN_CHOCOLATE,  40, CN_BOX,      "0:/chocolate.bin"}
+    {0, CN_APPLE,      800,  "kg",        "0:/apple.bin"},
+    {1, CN_MILK,       600,  CN_BOX,      "0:/milk.bin"},
+    {2, CN_BREAD,      1000, CN_PACK,     "0:/bread.bin"},
+    {3, CN_WATERMELON, 300,  "kg",        "0:/watermelon.bin"},
+    {4, CN_COLA,       300,  CN_BOTTLE,   "0:/cola.bin"},
+    {5, CN_CHOCOLATE,  4000, CN_BOX,      "0:/chocolate.bin"}
 };
 
 lv_obj_t * cart_list = NULL;
@@ -52,7 +52,7 @@ static lv_obj_t * price_label_full = NULL;    // 价格输入遮罩
 static int price_edit_idx = -1;               // 正在编辑的商品索引
 
 // 默认价格（用于重置）
-static const uint32_t default_prices[MAX_PRODUCTS] = {8, 6, 10, 3, 3, 40};
+static const uint32_t default_prices[MAX_PRODUCTS] = {800, 600, 1000, 300, 300, 4000};
 
 // 主页背景图片
 static lv_img_dsc_t bg_img_dsc;
@@ -209,7 +209,7 @@ void show_shop_screen(void)
                 uint8_t pid = tx->items[j].product_id;
                 if(pid < MAX_PRODUCTS) {
                     product_t * p = &shop_products[pid];
-                    float total = tx->items[j].quantity * (float)p->price;
+                    float total = tx->items[j].quantity * ((float)p->price / 100.0f);
                     char item_text[128];
                     snprintf(item_text, sizeof(item_text),
                              "%s x%.1f %s = %.2f " CN_YUAN,
@@ -287,8 +287,8 @@ void show_shop_screen(void)
 
         // 创建价格标签（小字体）
         lv_obj_t * price_label = lv_label_create(item_cont);
-        lv_label_set_text_fmt(price_label, "#ff0000 %d " CN_YUAN "# / %s",
-                              shop_products[i].price,
+        lv_label_set_text_fmt(price_label, "#ff0000 %d.%02d " CN_YUAN "# / %s",
+                              shop_products[i].price / 100, shop_products[i].price % 100,
                               shop_products[i].unit);
         lv_label_set_recolor(price_label, true);
         lv_obj_set_style_text_font(price_label, &ziti, 0);
@@ -437,7 +437,7 @@ void show_shop_screen(void)
             uint8_t pid = tx->items[j].product_id;
             if(pid < MAX_PRODUCTS) {
                 product_t * p = &shop_products[pid];
-                float total = tx->items[j].quantity * (float)p->price;
+                float total = tx->items[j].quantity * ((float)p->price / 100.0f);
                 char item_text[128];
                 snprintf(item_text, sizeof(item_text),
                          "%s x%.1f %s = %.2f " CN_YUAN,
@@ -764,7 +764,7 @@ static void shop_ui_update_price_mgmt_display(void)
     for (int i = 0; i < MAX_PRODUCTS; i++) {
         lv_obj_t * lbl = price_labels[i];
         if (lbl == NULL) continue;
-        lv_label_set_text_fmt(lbl, CN_PRICE_CUR_FMT, (int)shop_products[i].price);
+        lv_label_set_text_fmt(lbl, CN_PRICE_CUR_FMT, shop_products[i].price / 100, shop_products[i].price % 100);
     }
 }
 
@@ -783,12 +783,12 @@ static void price_mgmt_plus_minus_cb(lv_event_t * e)
     if (txt == NULL) return;
 
     if (txt[0] == '+') {
-        if (shop_products[prod_idx].price < 999) {
-            shop_products[prod_idx].price++;
+        if (shop_products[prod_idx].price < 99999) {
+            shop_products[prod_idx].price += 50;  // 每次增加0.50元
         }
     } else if (txt[0] == '-') {
-        if (shop_products[prod_idx].price > 1) {
-            shop_products[prod_idx].price--;
+        if (shop_products[prod_idx].price >= 50) {
+            shop_products[prod_idx].price -= 50;  // 每次减少0.50元
         }
     }
 
@@ -835,7 +835,8 @@ static void price_kb_event_cb(lv_event_t * e)
         }
 
         // 解析输入为整数价格
-        int new_price = atoi(input_str);
+        float new_price_float = atof(input_str);
+        int new_price = (int)(new_price_float * 100.0f + 0.5f);  // 转为分
         if (new_price <= 0) {
             // 无效输入，显示错误提示
             shop_ui_show_msgbox(CN_ERROR, CN_PRICE_INVALID, NULL);
@@ -843,7 +844,7 @@ static void price_kb_event_cb(lv_event_t * e)
             hide_price_input_ui();
             return;
         }
-        if (new_price > 9999) new_price = 9999; // 限制上限
+        if (new_price > 99999) new_price = 99999; // 限制上限 999.99元
 
         shop_products[price_edit_idx].price = (uint32_t)new_price;
         shop_ui_update_price_mgmt_display();
@@ -878,7 +879,7 @@ static void show_price_input_ui(int prod_idx)
 
     // 预填当前价格
     char cur_price[16];
-    snprintf(cur_price, sizeof(cur_price), "%d", (int)shop_products[prod_idx].price);
+    snprintf(cur_price, sizeof(cur_price), "%d.%02d", shop_products[prod_idx].price / 100, shop_products[prod_idx].price % 100);
     lv_textarea_set_text(price_input_ta, cur_price);
 
     // 关联键盘和文本框
@@ -980,7 +981,7 @@ void show_price_mgmt_screen(void)
         price_labels[i] = price_lbl;
         lv_obj_set_style_text_font(price_lbl, &ziti_title, 0);
         lv_obj_set_style_text_color(price_lbl, lv_palette_main(LV_PALETTE_RED), 0);
-        lv_label_set_text_fmt(price_lbl, CN_PRICE_CUR_FMT, (int)shop_products[i].price);
+        lv_label_set_text_fmt(price_lbl, CN_PRICE_CUR_FMT, shop_products[i].price / 100, shop_products[i].price % 100);
         lv_obj_align(price_lbl, LV_ALIGN_RIGHT_MID, -195, 0);
         lv_obj_add_flag(price_lbl, LV_OBJ_FLAG_CLICKABLE);
         lv_obj_add_event_cb(price_lbl, price_label_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)i);
