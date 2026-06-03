@@ -840,7 +840,7 @@ static void price_kb_event_cb(lv_event_t * e)
         if (new_price <= 0) {
             // 无效输入，显示错误提示
             shop_ui_show_msgbox(CN_ERROR, CN_PRICE_INVALID, NULL);
-            led_blink_n(LED_RED, 100, 3);
+            led_blink_n(LED_RED, 70, 3);
             hide_price_input_ui();
             return;
         }
@@ -1157,16 +1157,16 @@ lv_obj_t * shop_ui_show_msgbox(const char * title, const char * message, const l
     lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(card, 14, 0);
     lv_obj_set_style_border_width(card, 0, 0);
-    lv_obj_set_style_shadow_width(card, 16, 0);
+    lv_obj_set_style_shadow_width(card, 8, 0);
     lv_obj_set_style_shadow_color(card, lv_color_black(), 0);
     lv_obj_set_style_shadow_ofs_x(card, 0, 0);
-    lv_obj_set_style_shadow_ofs_y(card, 4, 0);
-    lv_obj_set_style_shadow_opa(card, LV_OPA_20, 0);
+    lv_obj_set_style_shadow_ofs_y(card, 2, 0);
+    lv_obj_set_style_shadow_opa(card, LV_OPA_10, 0);
     lv_obj_set_style_pad_all(card, 0, 0);
     lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
     lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(card, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_fade_in(card, 150, 0);
+    lv_obj_fade_in(card, 100, 0);
 
     /* 3. 标题栏（带左侧色条 + 图标） */
     lv_obj_t * title_bar = lv_obj_create(card);
@@ -1338,16 +1338,16 @@ void shop_ui_show_checkout_result(const transaction_t * tx, float grand_total, f
     lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(card, 14, 0);
     lv_obj_set_style_border_width(card, 0, 0);
-    lv_obj_set_style_shadow_width(card, 16, 0);
+    lv_obj_set_style_shadow_width(card, 8, 0);
     lv_obj_set_style_shadow_color(card, lv_color_black(), 0);
     lv_obj_set_style_shadow_ofs_x(card, 0, 0);
-    lv_obj_set_style_shadow_ofs_y(card, 4, 0);
-    lv_obj_set_style_shadow_opa(card, LV_OPA_20, 0);
+    lv_obj_set_style_shadow_ofs_y(card, 2, 0);
+    lv_obj_set_style_shadow_opa(card, LV_OPA_10, 0);
     lv_obj_set_style_pad_all(card, 0, 0);
     lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
     lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(card, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_fade_in(card, 150, 0);
+    lv_obj_fade_in(card, 100, 0);
 
     /* 3. 标题栏 — 大 ✓ + "结账成功" */
     lv_obj_t * title_bar = lv_obj_create(card);
@@ -1411,23 +1411,14 @@ void shop_ui_show_checkout_result(const transaction_t * tx, float grand_total, f
     for(uint8_t k = 0; k < tx->item_count; k++) {
         uint8_t pid = tx->items[k].product_id;
         if(pid < MAX_PRODUCTS) {
-            lv_obj_t * row = lv_obj_create(body);
-            lv_obj_set_size(row, LV_PCT(100), 30);
-            lv_obj_set_style_bg_opa(row, LV_OPA_0, 0);
-            lv_obj_set_style_border_width(row, 0, 0);
-            lv_obj_set_style_pad_ver(row, 0, 0);
-            lv_obj_set_style_pad_hor(row, 0, 0);
-            lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
-
             snprintf(line_buf, sizeof(line_buf), "%s  x%.1f%s  =  %.2f " CN_YUAN,
                      shop_products[pid].name,
                      tx->items[k].quantity,
                      shop_products[pid].unit,
                      tx->items[k].subtotal);
 
-            lv_obj_t * line_lbl = lv_label_create(row);
+            lv_obj_t * line_lbl = lv_label_create(body);
             lv_label_set_text(line_lbl, line_buf);
-            lv_obj_align(line_lbl, LV_ALIGN_LEFT_MID, 0, 0);
             lv_obj_set_style_text_font(line_lbl, &ziti, 0);
             lv_obj_set_style_text_color(line_lbl, lv_color_hex(0x555555), 0);
         }
@@ -1444,47 +1435,23 @@ void shop_ui_show_checkout_result(const transaction_t * tx, float grand_total, f
     /* 金额汇总 */
     if(grand_total != final_total) {
         /* 折前行 */
-        lv_obj_t * before_row = lv_obj_create(body);
-        lv_obj_set_size(before_row, LV_PCT(100), 28);
-        lv_obj_set_style_bg_opa(before_row, LV_OPA_0, 0);
-        lv_obj_set_style_border_width(before_row, 0, 0);
-        lv_obj_set_style_pad_all(before_row, 0, 0);
-        lv_obj_clear_flag(before_row, LV_OBJ_FLAG_SCROLLABLE);
-
         snprintf(line_buf, sizeof(line_buf), CN_BEFORE_DISC ": %.2f " CN_YUAN, grand_total);
-        lv_obj_t * before_lbl = lv_label_create(before_row);
+        lv_obj_t * before_lbl = lv_label_create(body);
         lv_label_set_text(before_lbl, line_buf);
-        lv_obj_align(before_lbl, LV_ALIGN_LEFT_MID, 0, 0);
         lv_obj_set_style_text_font(before_lbl, &ziti, 0);
         lv_obj_set_style_text_color(before_lbl, lv_color_hex(0x888888), 0);
 
         /* 折后行（绿色醒目） */
-        lv_obj_t * after_row = lv_obj_create(body);
-        lv_obj_set_size(after_row, LV_PCT(100), 32);
-        lv_obj_set_style_bg_opa(after_row, LV_OPA_0, 0);
-        lv_obj_set_style_border_width(after_row, 0, 0);
-        lv_obj_set_style_pad_all(after_row, 0, 0);
-        lv_obj_clear_flag(after_row, LV_OBJ_FLAG_SCROLLABLE);
-
         snprintf(line_buf, sizeof(line_buf), CN_AFTER_DISC ": %.2f " CN_YUAN "%s",
                  final_total, discount_desc);
-        lv_obj_t * after_lbl = lv_label_create(after_row);
+        lv_obj_t * after_lbl = lv_label_create(body);
         lv_label_set_text(after_lbl, line_buf);
-        lv_obj_align(after_lbl, LV_ALIGN_LEFT_MID, 0, 0);
         lv_obj_set_style_text_font(after_lbl, &ziti_title, 0);
         lv_obj_set_style_text_color(after_lbl, green_dark, 0);
     } else {
-        lv_obj_t * total_row = lv_obj_create(body);
-        lv_obj_set_size(total_row, LV_PCT(100), 32);
-        lv_obj_set_style_bg_opa(total_row, LV_OPA_0, 0);
-        lv_obj_set_style_border_width(total_row, 0, 0);
-        lv_obj_set_style_pad_all(total_row, 0, 0);
-        lv_obj_clear_flag(total_row, LV_OBJ_FLAG_SCROLLABLE);
-
         snprintf(line_buf, sizeof(line_buf), CN_TOTAL ": %.2f " CN_YUAN, final_total);
-        lv_obj_t * total_lbl = lv_label_create(total_row);
+        lv_obj_t * total_lbl = lv_label_create(body);
         lv_label_set_text(total_lbl, line_buf);
-        lv_obj_align(total_lbl, LV_ALIGN_LEFT_MID, 0, 0);
         lv_obj_set_style_text_font(total_lbl, &ziti_title, 0);
         lv_obj_set_style_text_color(total_lbl, green_dark, 0);
     }

@@ -183,7 +183,7 @@ static void kb_mode_add_to_cart_handler(const char * input_str)
                 break;
         }
         hide_input_ui();
-        led_blink_n(LED_RED, 100, 3);
+        led_blink_n(LED_RED, 70, 3);
         return;
     }
 
@@ -192,7 +192,7 @@ static void kb_mode_add_to_cart_handler(const char * input_str)
     shop_ui_update_cart_total();
     hide_input_ui();
     // 黄灯短闪：添加成功
-    led_blink(LED_YELLOW, 100);
+    led_blink(LED_YELLOW, 70);
 }
 
 /* 处理"修改数量"模式的确认 */
@@ -218,7 +218,7 @@ static void kb_mode_edit_quantity_handler(const char * input_str)
                 break;
         }
         hide_input_ui();
-        led_blink_n(LED_RED, 100, 3);
+        led_blink_n(LED_RED, 70, 3);
         return;
     }
 
@@ -263,6 +263,28 @@ void kb_event_cb(lv_event_t * e)
     }
 }
 
+// 异步LED闪烁回调函数（避免阻塞UI）
+static transaction_t pending_tx;
+static void async_tx_log_cb(lv_timer_t * timer) {
+    tx_log_add(&pending_tx);
+    lv_timer_del(timer);
+}
+
+static void async_led_blue_cb(lv_timer_t * timer) {
+    led_blink_n(LED_BLUE, 60, 2);
+    lv_timer_del(timer);
+}
+
+static void async_led_green_cb(lv_timer_t * timer) {
+    led_blink(LED_GREEN, 100);
+    lv_timer_del(timer);
+}
+
+static void async_led_green2_cb(lv_timer_t * timer) {
+    led_blink(LED_GREEN, 100);
+    lv_timer_del(timer);
+}
+
 // --- C. 结算按钮回调 (解析字符串求和) ---
 void checkout_btn_event_cb(lv_event_t * e)
 {
@@ -275,7 +297,7 @@ void checkout_btn_event_cb(lv_event_t * e)
     // 1. 检查购物车是否为空（child_cnt <= 1 表示只有标题行或空列表）
     if(child_cnt <= 1) {
         shop_ui_show_msgbox(CN_HINT, CN_CART_EMPTY, NULL);
-        led_blink_n(LED_RED, 100, 3);
+        led_blink_n(LED_RED, 70, 3);
         return;
     }
 
@@ -295,14 +317,14 @@ void checkout_btn_event_cb(lv_event_t * e)
     // 3. 总价为0时提示购物车为空
     if(grand_total == 0) {
         shop_ui_show_msgbox(CN_HINT, CN_CART_EMPTY, NULL);
-        led_blink_n(LED_RED, 100, 3);
+        led_blink_n(LED_RED, 70, 3);
         return;
     }
 
 		//对grand_total进行打折
 		if (current_discount != DISCOUNT_NONE && coupon_remaining[current_discount] <= 0) {
 		    shop_ui_show_msgbox(CN_HINT, CN_COUPON_USED_UP, NULL);
-		    led_blink_n(LED_RED, 100, 3);
+		    led_blink_n(LED_RED, 70, 3);
 		    return;
 		}
 
@@ -398,16 +420,24 @@ void checkout_btn_event_cb(lv_event_t * e)
         }
     }
 
-    // 保存交易记录到 SD 卡
-    tx_log_add(&tx);
+    // 保存交易记录到 SD 卡（使用定时器异步执行，避免阻塞UI）
+    memcpy(&pending_tx, &tx, sizeof(transaction_t));
+    lv_timer_t * tx_timer = lv_timer_create(async_tx_log_cb, 5, NULL);
+    lv_timer_set_repeat_count(tx_timer, 1);
 
 		// 5. 显示结算结果弹窗（先弹窗，再闪灯，避免迟滞感）
     shop_ui_show_checkout_result(&tx, grand_total, final_total, discount_desc);
-    // 蓝灯闪2下：SD写入完成
-    led_blink_n(LED_BLUE, 80, 2);
-    // 绿灯闪两下：结算成功
-    led_blink(LED_GREEN, 150); delay_us(100000);
-    led_blink(LED_GREEN, 150);
+    
+    // 蓝灯闪2下：SD写入完成（100ms后执行）
+    lv_timer_t * led_blue_timer = lv_timer_create(async_led_blue_cb, 100, NULL);
+    lv_timer_set_repeat_count(led_blue_timer, 1);
+    
+    // 绿灯闪两下：结算成功（200ms和400ms后执行）
+    lv_timer_t * led_green1_timer = lv_timer_create(async_led_green_cb, 200, NULL);
+    lv_timer_set_repeat_count(led_green1_timer, 1);
+    lv_timer_t * led_green2_timer = lv_timer_create(async_led_green2_cb, 400, NULL);
+    lv_timer_set_repeat_count(led_green2_timer, 1);
+    
     lv_timer_t * t = lv_timer_create(clear_cart_timer_cb, 500, NULL);
     lv_timer_set_repeat_count(t, 1);
 }

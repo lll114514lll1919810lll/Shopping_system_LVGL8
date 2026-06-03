@@ -1,7 +1,7 @@
 /*******************************************************************************
  * Size: 14 px
  * Bpp: 2
- * Opts: --bpp 2 --size 14 --no-compress --stride 1 --align 1 --font SourceHanSansSC-Regular-2.otf --symbols 不中串为主义乐于交付件价优但位作使修储元克入全关写减击分列删券前剩力功动包单可合名后品商器回因多大奶字存完定实巧已序张弹当录必态总情惠成打扣折择拼持接提操支改数整文无时明易显暂最本条果染查格此活清渲源满点牛物理瓜瓶用界的盒直看码确示称空窗符算管系细结统编置节苹西要计认记译该详误请账购车转输返这选部里重量错闭除隔需面页项须预默取消再来一 --format lvgl -o ziti.c
+ * Opts: --bpp 2 --size 14 --no-compress --stride 1 --align 1 --font SourceHanSansSC-Regular-2.otf --symbols 不中串为主义乐于交付件价优但位作使修储元克入全关写减击分列删券前剩力功动包单可合名后品商器回因多大奶字存完定实巧已序张弹当录必态总情惠成打扣折择拼持接提操支改数整文无时明易显暂最本条果染查格此活清渲源满点牛物理瓜瓶用界的盒直看码确示称空窗符算管系细结统编置节苹西要计认记译该详误请账购车转输返这选部里重量错闭除隔需面页项须预默取消再来一， --format lvgl -o ziti.c
  ******************************************************************************/
 
 #ifdef __has_include
@@ -1418,7 +1418,10 @@ static LV_ATTRIBUTE_LARGE_CONST const uint8_t glyph_bitmap[] = {
     0x2, 0xff, 0x82, 0xc0, 0x1, 0x84, 0x39, 0x3,
     0xfa, 0x87, 0x30, 0x11, 0x44, 0x92, 0x43, 0x28,
     0x9c, 0xc, 0x52, 0x43, 0x0, 0xa0, 0x0, 0x0,
-    0x0
+    0x0,
+
+    /* U+FF0C "，" */
+    0x0, 0x2c, 0x1d, 0x9, 0x28, 0x10
 };
 
 
@@ -1595,7 +1598,8 @@ static const lv_font_fmt_txt_glyph_dsc_t glyph_dsc[] = {
     {.bitmap_index = 7520, .adv_w = 224, .box_w = 14, .box_h = 12, .ofs_x = 0, .ofs_y = -1},
     {.bitmap_index = 7562, .adv_w = 224, .box_w = 14, .box_h = 13, .ofs_x = 0, .ofs_y = -1},
     {.bitmap_index = 7608, .adv_w = 224, .box_w = 14, .box_h = 14, .ofs_x = 0, .ofs_y = -2},
-    {.bitmap_index = 7657, .adv_w = 224, .box_w = 14, .box_h = 14, .ofs_x = 0, .ofs_y = -2}
+    {.bitmap_index = 7657, .adv_w = 224, .box_w = 14, .box_h = 14, .ofs_x = 0, .ofs_y = -2},
+    {.bitmap_index = 7706, .adv_w = 224, .box_w = 4, .box_h = 6, .ofs_x = 1, .ofs_y = -2}
 };
 
 /*---------------------
@@ -1623,15 +1627,16 @@ static const uint16_t unicode_list_0[] = {
     0x3b81, 0x3da1, 0x3da4, 0x3db0, 0x3dd1, 0x3de5, 0x3de6, 0x3def,
     0x3df7, 0x3f26, 0x3f2d, 0x4166, 0x416c, 0x4193, 0x41d4, 0x41d9,
     0x4209, 0x42e8, 0x43cc, 0x43cd, 0x43cf, 0x4719, 0x47ed, 0x4864,
-    0x4894, 0x4900, 0x4962, 0x4a75, 0x4a79, 0x4a7b, 0x4a84, 0x50d8
+    0x4894, 0x4900, 0x4962, 0x4a75, 0x4a79, 0x4a7b, 0x4a84, 0x50d8,
+    0xb10c
 };
 
 /*Collect the unicode lists and glyph_id offsets*/
 static const lv_font_fmt_txt_cmap_t cmaps[] =
 {
     {
-        .range_start = 19968, .range_length = 20697, .glyph_id_start = 1,
-        .unicode_list = unicode_list_0, .glyph_id_ofs_list = NULL, .list_length = 168, .type = LV_FONT_FMT_TXT_CMAP_SPARSE_TINY
+        .range_start = 19968, .range_length = 45325, .glyph_id_start = 1,
+        .unicode_list = unicode_list_0, .glyph_id_ofs_list = NULL, .list_length = 169, .type = LV_FONT_FMT_TXT_CMAP_SPARSE_TINY
     }
 };
 
