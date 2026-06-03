@@ -124,6 +124,9 @@ static input_result_t validate_and_parse_input(const char * input_str, const pro
         result.error = INPUT_ERR_NON_POSITIVE;
         return result;
     }
+    if(result.quantity > 9999) {
+        result.quantity = 9999;
+    }
     
     // 计算总价
     result.total_price = result.quantity * (float)product->price;
@@ -655,4 +658,34 @@ void price_config_save(void)
 
     f_write(&file, buf, strlen(buf), &bytes_written);
     f_close(&file);
+}
+
+// ==================== "再来一单" 功能 ====================
+
+bool reorder_pending = false;  // 再来一单待处理标记
+
+/* 淡出关闭弹窗 → 直接跳转购物界面 */
+static void reorder_close_ready_cb(lv_anim_t * a)
+{
+    lv_obj_del((lv_obj_t *)a->var);   // 删除弹窗遮罩
+    show_shop_screen();                // 直接进购物界面
+}
+
+/* "再来一单"按钮回调：淡出弹窗 → 设置标记 → 回主页 → 自动进购物 */
+void reorder_btn_cb(lv_event_t * e)
+{
+    lv_obj_t * overlay = (lv_obj_t *)lv_event_get_user_data(e);
+    if(overlay == NULL || current_detail_tx == NULL) return;
+
+    reorder_pending = true;
+
+    // 淡出动画关闭弹窗（与关闭按钮相同）
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, overlay);
+    lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_obj_set_style_opa);
+    lv_anim_set_values(&a, LV_OPA_COVER, LV_OPA_TRANSP);
+    lv_anim_set_time(&a, 100);
+    lv_anim_set_ready_cb(&a, reorder_close_ready_cb);
+    lv_anim_start(&a);
 }

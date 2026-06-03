@@ -58,6 +58,9 @@ static const uint32_t default_prices[MAX_PRODUCTS] = {8, 6, 10, 3, 3, 40};
 static lv_img_dsc_t bg_img_dsc;
 static uint8_t * bg_img_buffer = NULL;
 
+// 当前查看的交易明细指针（供"再来一单"使用）
+transaction_t * current_detail_tx = NULL;
+
 // 前向声明
 static void shop_btn_cb(lv_event_t * e);
 static void history_btn_home_cb(lv_event_t * e);
@@ -74,6 +77,8 @@ static void price_kb_event_cb(lv_event_t * e);
 static void price_overlay_click_cb(lv_event_t * e);
 static void show_price_input_ui(int prod_idx);
 static void hide_price_input_ui(void);
+
+// 前向声明（续）
 
 /* 创建主页 */
 void show_home_screen(void)
@@ -188,6 +193,45 @@ void show_shop_screen(void)
     // 避免重复创建
     if(shop_screen) {
         lv_scr_load_anim(shop_screen, LV_SCR_LOAD_ANIM_MOVE_LEFT, 300, 0, false);
+
+        // 再来一单：自动加载上次交易的商品和优惠券
+        if(reorder_pending && current_detail_tx != NULL) {
+            reorder_pending = false;
+            transaction_t * tx = current_detail_tx;
+
+            if(cart_list != NULL) {
+                uint32_t child_cnt = lv_obj_get_child_cnt(cart_list);
+                for(int i = child_cnt - 1; i > 0; i--) {
+                    lv_obj_del(lv_obj_get_child(cart_list, i));
+                }
+            }
+            for(uint8_t j = 0; j < tx->item_count; j++) {
+                uint8_t pid = tx->items[j].product_id;
+                if(pid < MAX_PRODUCTS) {
+                    product_t * p = &shop_products[pid];
+                    float total = tx->items[j].quantity * (float)p->price;
+                    char item_text[128];
+                    snprintf(item_text, sizeof(item_text),
+                             "%s x%.1f %s = %.2f " CN_YUAN,
+                             p->name, tx->items[j].quantity, p->unit, total);
+                    shop_ui_add_cart_item(item_text, p->name);
+                }
+            }
+            int disc = (int)tx->discount_type;
+            if(disc > 0 && coupon_remaining[disc] <= 0) disc = 0;
+            current_discount = disc;
+
+            // 视觉上选中对应复选框
+            for(int i = 0; i < 5; i++) {
+                if(discount_checkboxes[i]) lv_obj_clear_state(discount_checkboxes[i], LV_STATE_CHECKED);
+            }
+            if(disc >= 0 && disc < 5 && discount_checkboxes[disc]) {
+                lv_obj_add_state(discount_checkboxes[disc], LV_STATE_CHECKED);
+            }
+
+            shop_ui_update_cart_total();
+        }
+
         shop_ui_update_coupon_display();
         return;
     }
@@ -377,6 +421,45 @@ void show_shop_screen(void)
 
     // 初始应用门槛检查和颜色状态
     shop_ui_update_coupon_display();
+
+    // 再来一单：首次创建时也加载上次交易
+    if(reorder_pending && current_detail_tx != NULL) {
+        reorder_pending = false;
+        transaction_t * tx = current_detail_tx;
+
+        if(cart_list != NULL) {
+            uint32_t child_cnt = lv_obj_get_child_cnt(cart_list);
+            for(int i = child_cnt - 1; i > 0; i--) {
+                lv_obj_del(lv_obj_get_child(cart_list, i));
+            }
+        }
+        for(uint8_t j = 0; j < tx->item_count; j++) {
+            uint8_t pid = tx->items[j].product_id;
+            if(pid < MAX_PRODUCTS) {
+                product_t * p = &shop_products[pid];
+                float total = tx->items[j].quantity * (float)p->price;
+                char item_text[128];
+                snprintf(item_text, sizeof(item_text),
+                         "%s x%.1f %s = %.2f " CN_YUAN,
+                         p->name, tx->items[j].quantity, p->unit, total);
+                shop_ui_add_cart_item(item_text, p->name);
+            }
+        }
+        int disc = (int)tx->discount_type;
+        if(disc > 0 && coupon_remaining[disc] <= 0) disc = 0;
+        current_discount = disc;
+
+        // 视觉上选中对应复选框
+        for(int i = 0; i < 5; i++) {
+            if(discount_checkboxes[i]) lv_obj_clear_state(discount_checkboxes[i], LV_STATE_CHECKED);
+        }
+        if(disc >= 0 && disc < 5 && discount_checkboxes[disc]) {
+            lv_obj_add_state(discount_checkboxes[disc], LV_STATE_CHECKED);
+        }
+
+        shop_ui_update_cart_total();
+        shop_ui_update_coupon_display();
+    }
 
     // 切换到购物界面
     lv_scr_load_anim(shop_screen, LV_SCR_LOAD_ANIM_MOVE_LEFT, 300, 0, false);
@@ -1658,6 +1741,8 @@ void shop_ui_show_tx_detail(transaction_t * tx)
 {
     if(tx == NULL) return;
 
+    current_detail_tx = tx;  // 供\"再来一单\"回调使用
+
     // 创建全屏半透明遮罩
     lv_obj_t * overlay = lv_obj_create(lv_scr_act());
     lv_obj_set_size(overlay, 1024, 600);
@@ -1669,7 +1754,7 @@ void shop_ui_show_tx_detail(transaction_t * tx)
 
     // 详情弹窗
     lv_obj_t * popup = lv_obj_create(overlay);
-    lv_obj_set_size(popup, 500, 450);
+    lv_obj_set_size(popup, 500, 440);
     lv_obj_set_pos(popup, 262, 75);
     lv_obj_set_style_bg_color(popup, lv_color_white(), 0);
     lv_obj_set_style_bg_opa(popup, LV_OPA_COVER, 0);
@@ -1735,15 +1820,32 @@ void shop_ui_show_tx_detail(transaction_t * tx)
         }
     }
 
+    // 按钮行（再来一单 | 确定）
+    lv_obj_t * btn_row = lv_obj_create(popup);
+    lv_obj_set_width(btn_row, lv_pct(100));
+    lv_obj_set_height(btn_row, 84);
+    lv_obj_set_flex_flow(btn_row, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(btn_row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_gap(btn_row, 10, 0);
+    lv_obj_set_style_bg_opa(btn_row, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(btn_row, 0, 0);
+
+    // 再来一单按钮
+    lv_obj_t * reorder_btn = lv_btn_create(btn_row);
+    lv_obj_set_flex_grow(reorder_btn, 1);
+    lv_obj_set_style_bg_color(reorder_btn, lv_palette_main(LV_PALETTE_GREEN), 0);
+    lv_obj_add_event_cb(reorder_btn, reorder_btn_cb, LV_EVENT_CLICKED, overlay);
+    lv_obj_t * reorder_lbl = lv_label_create(reorder_btn);
+    lv_label_set_text(reorder_lbl, CN_REORDER);
+    lv_obj_set_style_text_font(reorder_lbl, &ziti, 0);
+
     // 确定/关闭按钮
-    lv_obj_t * close_btn = lv_btn_create(popup);
-    lv_obj_set_size(close_btn, lv_pct(60), 40);
+    lv_obj_t * close_btn = lv_btn_create(btn_row);
+    lv_obj_set_flex_grow(close_btn, 1);
     lv_obj_set_style_bg_color(close_btn, lv_palette_main(LV_PALETTE_BLUE), 0);
     lv_obj_add_event_cb(close_btn, close_detail_popup, LV_EVENT_CLICKED, overlay);
     lv_obj_t * close_lbl = lv_label_create(close_btn);
     lv_label_set_text(close_lbl, CN_OK);
-    lv_obj_center(close_lbl);
-
     // 淡入动画
     lv_obj_fade_in(overlay, 150, 0);
 }

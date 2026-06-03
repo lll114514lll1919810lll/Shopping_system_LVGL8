@@ -98,7 +98,7 @@ extern const lv_font_t ziti;                // 14px中文小字体
 extern const lv_font_t ziti_title;          // 18px中文标题字体
 extern const lv_font_t ziti_max;            // 24px中文大字体
 
-/* ==================== 核心功能函数原型 ==================== */
+extern transaction_t * current_detail_tx;   // 当前查看的交易明细（供\"再来一单\"使用）
 
 void shop_ui_init(void);                    // 初始化UI（显示主页）
 void show_home_screen(void);                // 显示主页
@@ -138,6 +138,8 @@ void shop_ui_close_coupon_mgmt_screen(void);                // 关闭优惠券�
 void show_price_mgmt_screen(void);                              // 显示价格管理界面
 void shop_ui_close_price_mgmt_screen(void);                     // 关闭价格管理界面
 
+/* ==================== \"再来一单\" 回调 ==================== */
+void reorder_btn_cb(lv_event_t * e);extern bool reorder_pending;                               // 再来一单待处理标记
 /* ==================== 价格配置持久化 ==================== */
 void price_config_load(void);                              // 从SD卡加载商品价格
 void price_config_save(void);                              // 保存商品价格到SD卡
