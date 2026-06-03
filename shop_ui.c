@@ -821,14 +821,19 @@ static void popup_overlay_del_cb(lv_anim_t * a)
     lv_obj_del((lv_obj_t *)a->var);
 }
 
+/* 弹窗互斥锁：防止多个弹窗同时存在导致卡顿 */
+static lv_obj_t * active_popup_overlay = NULL;
+
 static void popup_close_anim(lv_obj_t * overlay)
 {
+    if(overlay == NULL) return;
+    if(active_popup_overlay == overlay) active_popup_overlay = NULL;
     lv_anim_t a;
     lv_anim_init(&a);
     lv_anim_set_var(&a, overlay);
     lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_obj_set_style_opa);
     lv_anim_set_values(&a, LV_OPA_COVER, LV_OPA_TRANSP);
-    lv_anim_set_time(&a, 150);
+    lv_anim_set_time(&a, 120);
     lv_anim_set_ready_cb(&a, popup_overlay_del_cb);
     lv_anim_start(&a);
 }
@@ -894,6 +899,9 @@ static const char * popup_get_icon(popup_style_t style)
  */
 lv_obj_t * shop_ui_show_msgbox(const char * title, const char * message, const lv_color_t * txt_color)
 {
+    /* 弹窗互斥：已有弹窗时不再创建新弹窗 */
+    if(active_popup_overlay) return active_popup_overlay;
+
     popup_style_t style = popup_get_style(title);
     lv_color_t accent = popup_get_accent(style);
     lv_color_t accent_light = lv_color_mix(accent, lv_color_white(), 200);
@@ -907,6 +915,7 @@ lv_obj_t * shop_ui_show_msgbox(const char * title, const char * message, const l
     lv_obj_clear_flag(overlay, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(overlay, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(overlay, popup_overlay_click_cb, LV_EVENT_CLICKED, NULL);
+    active_popup_overlay = overlay;
 
     /* 2. 弹窗卡片 */
     lv_obj_t * card = lv_obj_create(overlay);
@@ -917,17 +926,16 @@ lv_obj_t * shop_ui_show_msgbox(const char * title, const char * message, const l
     lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(card, 14, 0);
     lv_obj_set_style_border_width(card, 0, 0);
-    lv_obj_set_style_shadow_width(card, 40, 0);
+    lv_obj_set_style_shadow_width(card, 16, 0);
     lv_obj_set_style_shadow_color(card, lv_color_black(), 0);
     lv_obj_set_style_shadow_ofs_x(card, 0, 0);
-    lv_obj_set_style_shadow_ofs_y(card, 8, 0);
-    lv_obj_set_style_shadow_opa(card, LV_OPA_30, 0);
+    lv_obj_set_style_shadow_ofs_y(card, 4, 0);
+    lv_obj_set_style_shadow_opa(card, LV_OPA_20, 0);
     lv_obj_set_style_pad_all(card, 0, 0);
-    lv_obj_set_style_clip_corner(card, true, 0);
     lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
     lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(card, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_fade_in(card, 200, 0);
+    lv_obj_fade_in(card, 150, 0);
 
     /* 3. 标题栏（带左侧色条 + 图标） */
     lv_obj_t * title_bar = lv_obj_create(card);
@@ -939,26 +947,26 @@ lv_obj_t * shop_ui_show_msgbox(const char * title, const char * message, const l
     lv_obj_set_style_pad_hor(title_bar, 16, 0);
     lv_obj_clear_flag(title_bar, LV_OBJ_FLAG_SCROLLABLE);
 
-    /* 左侧色条 */
-    lv_obj_t * accent_bar = lv_obj_create(title_bar);
-    lv_obj_set_size(accent_bar, 5, 28);
-    lv_obj_align(accent_bar, LV_ALIGN_LEFT_MID, 0, 0);
-    lv_obj_set_style_bg_color(accent_bar, accent, 0);
-    lv_obj_set_style_bg_opa(accent_bar, LV_OPA_COVER, 0);
-    lv_obj_set_style_radius(accent_bar, 3, 0);
-    lv_obj_set_style_border_width(accent_bar, 0, 0);
+    /* 图标（彩色圆形 + 白色符号） */
+    lv_obj_t * icon_circle = lv_obj_create(title_bar);
+    lv_obj_set_size(icon_circle, 30, 30);
+    lv_obj_align(icon_circle, LV_ALIGN_LEFT_MID, 16, 0);
+    lv_obj_set_style_radius(icon_circle, 15, 0);
+    lv_obj_set_style_bg_color(icon_circle, accent, 0);
+    lv_obj_set_style_bg_opa(icon_circle, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(icon_circle, 0, 0);
+    lv_obj_clear_flag(icon_circle, LV_OBJ_FLAG_SCROLLABLE);
 
-    /* 图标 */
-    lv_obj_t * icon = lv_label_create(title_bar);
+    lv_obj_t * icon = lv_label_create(icon_circle);
     lv_label_set_text(icon, popup_get_icon(style));
-    lv_obj_align(icon, LV_ALIGN_LEFT_MID, 16, 0);
-    lv_obj_set_style_text_color(icon, accent, 0);
+    lv_obj_center(icon);
+    lv_obj_set_style_text_color(icon, lv_color_white(), 0);
     lv_obj_set_style_text_font(icon, &ziti_title, 0);
 
     /* 标题文字 */
     lv_obj_t * title_lbl = lv_label_create(title_bar);
     lv_label_set_text(title_lbl, title ? title : "");
-    lv_obj_align(title_lbl, LV_ALIGN_LEFT_MID, 44, 0);
+    lv_obj_align(title_lbl, LV_ALIGN_LEFT_MID, 56, 0);
     lv_obj_set_style_text_font(title_lbl, &ziti_title, 0);
     lv_obj_set_style_text_color(title_lbl, lv_color_hex(0x333333), 0);
 
@@ -1072,7 +1080,10 @@ void shop_ui_add_cart_item(const char * item_text, const char * product_name)
  */
 void shop_ui_show_checkout_result(const transaction_t * tx, float grand_total, float final_total, const char * discount_desc)
 {
-    lv_color_t green      = lv_palette_main(LV_PALETTE_GREEN);
+    /* 弹窗互斥 */
+    if(active_popup_overlay) return;
+
+    lv_color_t green       = lv_palette_main(LV_PALETTE_GREEN);
     lv_color_t green_light = lv_color_mix(green, lv_color_white(), 200);
     lv_color_t green_dark  = lv_palette_darken(LV_PALETTE_GREEN, 2);
 
@@ -1085,6 +1096,7 @@ void shop_ui_show_checkout_result(const transaction_t * tx, float grand_total, f
     lv_obj_clear_flag(overlay, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(overlay, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(overlay, popup_overlay_click_cb, LV_EVENT_CLICKED, NULL);
+    active_popup_overlay = overlay;
 
     /* 2. 卡片 */
     lv_obj_t * card = lv_obj_create(overlay);
@@ -1095,17 +1107,16 @@ void shop_ui_show_checkout_result(const transaction_t * tx, float grand_total, f
     lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(card, 14, 0);
     lv_obj_set_style_border_width(card, 0, 0);
-    lv_obj_set_style_shadow_width(card, 40, 0);
+    lv_obj_set_style_shadow_width(card, 16, 0);
     lv_obj_set_style_shadow_color(card, lv_color_black(), 0);
     lv_obj_set_style_shadow_ofs_x(card, 0, 0);
-    lv_obj_set_style_shadow_ofs_y(card, 8, 0);
-    lv_obj_set_style_shadow_opa(card, LV_OPA_30, 0);
+    lv_obj_set_style_shadow_ofs_y(card, 4, 0);
+    lv_obj_set_style_shadow_opa(card, LV_OPA_20, 0);
     lv_obj_set_style_pad_all(card, 0, 0);
-    lv_obj_set_style_clip_corner(card, true, 0);
     lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
     lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(card, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_fade_in(card, 200, 0);
+    lv_obj_fade_in(card, 150, 0);
 
     /* 3. 标题栏 — 大 ✓ + "结账成功" */
     lv_obj_t * title_bar = lv_obj_create(card);
@@ -1299,9 +1310,11 @@ void shop_ui_close_cart_menu(void)
  */
 lv_obj_t * shop_ui_show_cart_action_menu(void)
 {
+    /* 弹窗互斥 */
+    if(active_popup_overlay) return active_popup_overlay;
+
     lv_color_t red_accent  = lv_palette_main(LV_PALETTE_RED);
     lv_color_t blue_accent = lv_palette_main(LV_PALETTE_BLUE);
-    lv_color_t grey_accent = lv_palette_main(LV_PALETTE_GREY);
 
     /* 1. 遮罩 */
     lv_obj_t * overlay = lv_obj_create(lv_scr_act());
@@ -1312,6 +1325,7 @@ lv_obj_t * shop_ui_show_cart_action_menu(void)
     lv_obj_clear_flag(overlay, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(overlay, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(overlay, popup_overlay_click_cb, LV_EVENT_CLICKED, NULL);
+    active_popup_overlay = overlay;
 
     /* 2. 卡片 */
     lv_obj_t * card = lv_obj_create(overlay);
@@ -1322,17 +1336,16 @@ lv_obj_t * shop_ui_show_cart_action_menu(void)
     lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(card, 14, 0);
     lv_obj_set_style_border_width(card, 0, 0);
-    lv_obj_set_style_shadow_width(card, 40, 0);
+    lv_obj_set_style_shadow_width(card, 16, 0);
     lv_obj_set_style_shadow_color(card, lv_color_black(), 0);
     lv_obj_set_style_shadow_ofs_x(card, 0, 0);
-    lv_obj_set_style_shadow_ofs_y(card, 8, 0);
-    lv_obj_set_style_shadow_opa(card, LV_OPA_30, 0);
+    lv_obj_set_style_shadow_ofs_y(card, 4, 0);
+    lv_obj_set_style_shadow_opa(card, LV_OPA_20, 0);
     lv_obj_set_style_pad_all(card, 0, 0);
-    lv_obj_set_style_clip_corner(card, true, 0);
     lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
     lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(card, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_fade_in(card, 200, 0);
+    lv_obj_fade_in(card, 150, 0);
 
     /* 3. 标题栏 */
     lv_obj_t * title_bar = lv_obj_create(card);
