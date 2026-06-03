@@ -22,6 +22,9 @@ int main()
     // 加载优惠券配置（从SD卡恢复优惠券数量）
     coupon_config_load();
 
+    // 加载商品价格配置（从SD卡恢复自定义价格）
+    price_config_load();
+
     shop_ui_init(); 
 
     while(1){

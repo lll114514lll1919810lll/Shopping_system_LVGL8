@@ -13,6 +13,7 @@
 #define MAX_TX_ITEMS_PER_TX  10     // 单笔交易最多明细项数
 #define TX_LOG_FILE          "0:/transactions.csv"
 #define COUPON_CONFIG_FILE   "0:/coupon.dat"
+#define PRICE_CONFIG_FILE    "0:/price.dat"
 
 /* ==================== 数据结构定义 ==================== */
 
@@ -104,7 +105,6 @@ void cart_list_btn_event_cb(lv_event_t* e);
 void show_input_ui(void);                    // 显示键盘输入界面
 void hide_input_ui(void);                    // 隐藏键盘输入界面
 extern kb_input_mode_t current_kb_mode;      // 当前键盘输入模式（设置后决定确认行为）
-void cart_list_btn_event_cb(lv_event_t* e);
 
 /* ==================== 交易记录函数原型 ==================== */
 void tx_log_init(void);                                     // 初始化交易记录
@@ -122,6 +122,14 @@ void shop_ui_close_shop_screen(void);                       // 关闭购物界�
 void show_coupon_mgmt_screen(void);                         // 显示优惠券管理界面
 void shop_ui_close_coupon_mgmt_screen(void);                // 关闭优惠券管理界面
 
+/* ==================== 价格管理界面 ==================== */
+void show_price_mgmt_screen(void);
+void shop_ui_close_price_mgmt_screen(void);
+
+/* ==================== 价格配置持久化 ==================== */
+void price_config_load(void);                              // 从SD卡加载商品价格
+void price_config_save(void);                              // 保存商品价格到SD卡
+
 /* ==================== 优惠券配置持久化 ==================== */
 void coupon_config_load(void);                              // 从SD卡加载优惠券数量
 void coupon_config_save(void);                              // 保存优惠券数量到SD卡
@@ -135,6 +143,9 @@ lv_obj_t * shop_ui_show_msgbox(const char * title, const char * message, const l
 void shop_ui_add_cart_item(const char * item_text, const char * product_name);
 void shop_ui_show_checkout_result(const transaction_t * tx, float grand_total, float final_total, const char * discount_desc);
 lv_obj_t * shop_ui_show_cart_action_menu(void);
+lv_obj_t * shop_ui_get_cart_delete_btn(void);              // 获取购物车操作菜单的删除按钮
+lv_obj_t * shop_ui_get_cart_edit_btn(void);                // 获取购物车操作菜单的修改按钮
+void shop_ui_close_cart_menu(void);                        // 关闭购物车操作菜单
 void shop_ui_close_history_panel(void);
 void shop_ui_refresh_history_list(void);
 void shop_ui_show_tx_detail(transaction_t * tx);

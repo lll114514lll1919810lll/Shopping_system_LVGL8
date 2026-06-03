@@ -462,7 +462,8 @@ void discount_cb_event_cb(lv_event_t * e) {
 }
 
 // 购物车操作菜单辅助函数前向声明
-static void cart_action_btnmatrix_cb(lv_event_t * e);
+static void cart_action_delete_cb(lv_event_t * e);
+static void cart_action_edit_cb(lv_event_t * e);
 
 // 购物车按钮项点击回调：点击商品项弹出操作菜单（删除/修改数量）
 void cart_list_btn_event_cb(lv_event_t* e)
@@ -476,7 +477,7 @@ void cart_list_btn_event_cb(lv_event_t* e)
         const char * text = lv_list_get_btn_text(cart_list, btn);
         if(text == NULL) return;
 
-        // 反向查找对应的商品（通过 user_data 传递给操作菜单回调）
+        // 反向查找对应的商品
         product_t * target_product = NULL;
         for(uint8_t j = 0; j < MAX_PRODUCTS; j++) {
             if(strncmp(text, shop_products[j].name, strlen(shop_products[j].name)) == 0) {
@@ -485,36 +486,38 @@ void cart_list_btn_event_cb(lv_event_t* e)
             }
         }
 
-        // 创建操作选择弹窗（使用 btnmatrix），标题栏右侧带关闭按钮
-        lv_obj_t * mbox = shop_ui_show_cart_action_menu();
+        /* 创建操作选择弹窗，获取删除和修改按钮并绑定回调 */
+        shop_ui_show_cart_action_menu();
+        lv_obj_t * del_btn  = shop_ui_get_cart_delete_btn();
+        lv_obj_t * edit_btn = shop_ui_get_cart_edit_btn();
 
-        /* 获取消息框内部的按钮矩阵，并为其添加事件回调。
-         * 回调通过 user_data 传入被操作的列表按钮（btn），
-         * 根据选中的按钮索引执行删除或修改数量操作。
-         */
-        lv_obj_t * btnm = lv_msgbox_get_btns(mbox);
-        if(btnm != NULL) {
-            lv_obj_add_event_cb(btnm, cart_action_btnmatrix_cb, LV_EVENT_VALUE_CHANGED, btn);
+        if(del_btn != NULL) {
+            lv_obj_add_event_cb(del_btn, cart_action_delete_cb, LV_EVENT_CLICKED, btn);
+        }
+        if(edit_btn != NULL) {
+            lv_obj_add_event_cb(edit_btn, cart_action_edit_cb, LV_EVENT_CLICKED, btn);
         }
     }
 }
 
-/* 按钮矩阵事件回调：处理购物车操作（删除 / 修改数量） */
-static void cart_action_btnmatrix_cb(lv_event_t * e)
+/* 删除商品按钮回调 */
+static void cart_action_delete_cb(lv_event_t * e)
 {
-    if(lv_event_get_code(e) != LV_EVENT_VALUE_CHANGED) return;
-
-    lv_obj_t * btnm = lv_event_get_target(e);
-    int sel = (int)lv_btnmatrix_get_selected_btn(btnm);
+    if(lv_event_get_code(e) != LV_EVENT_CLICKED) return;
     lv_obj_t * list_btn = (lv_obj_t *)lv_event_get_user_data(e);
-    if(list_btn == NULL) return;
-
-    if(sel == 0) {
-        /* 删除商品 */
+    if(list_btn) {
         lv_obj_del(list_btn);
         shop_ui_update_cart_total();
-    } else if(sel == 1) {
-        /* 修改数量：根据按钮文本查找对应商品并进入编辑模式 */
+    }
+    shop_ui_close_cart_menu();
+}
+
+/* 修改数量按钮回调 */
+static void cart_action_edit_cb(lv_event_t * e)
+{
+    if(lv_event_get_code(e) != LV_EVENT_CLICKED) return;
+    lv_obj_t * list_btn = (lv_obj_t *)lv_event_get_user_data(e);
+    if(list_btn) {
         const char * text = lv_list_get_btn_text(cart_list, list_btn);
         if(text) {
             product_t * target_product = NULL;
@@ -527,7 +530,6 @@ static void cart_action_btnmatrix_cb(lv_event_t * e)
             if(target_product) {
                 current_product = target_product;
                 current_kb_mode = KB_MODE_EDIT_QUANTITY;
-
                 static char prompt_str[96];
                 snprintf(prompt_str, sizeof(prompt_str), "%s%s%s",
                          CN_NEW_QTY_PREFIX, target_product->name, CN_NEW_QTY_MID);
@@ -536,10 +538,7 @@ static void cart_action_btnmatrix_cb(lv_event_t * e)
             }
         }
     }
-
-    /* 关闭消息框 */
-    lv_obj_t * mbox = lv_obj_get_parent(btnm);
-    if(mbox) lv_msgbox_close(mbox);
+    shop_ui_close_cart_menu();
 }
 
 // ==================== 交易历史面板 ====================
@@ -599,6 +598,62 @@ void coupon_config_save(void)
              coupon_remaining[4]);
 
     res = f_open(&file, COUPON_CONFIG_FILE, FA_WRITE | FA_CREATE_ALWAYS);
+    if(res != FR_OK) return;
+
+    f_write(&file, buf, strlen(buf), &bytes_written);
+    f_close(&file);
+}
+
+// ==================== 价格配置持久化 ====================
+
+/* 从 SD 卡加载商品价格 */
+void price_config_load(void)
+{
+    FIL file;
+    FRESULT res;
+    UINT bytes_read;
+    char buf[64];
+
+    res = f_open(&file, PRICE_CONFIG_FILE, FA_READ);
+    if(res != FR_OK) return;
+
+    FSIZE_t file_size = f_size(&file);
+    if(file_size >= sizeof(buf)) {
+        f_close(&file);
+        return;
+    }
+
+    res = f_read(&file, buf, (UINT)file_size, &bytes_read);
+    f_close(&file);
+    if(res != FR_OK || bytes_read == 0) return;
+
+    buf[bytes_read] = '\0';
+
+    // 解析格式: 8,6,10,3,3,40
+    char * p = buf;
+    for (int i = 0; i < MAX_PRODUCTS; i++) {
+        uint32_t price = (uint32_t)strtol(p, &p, 10);
+        if (price > 0 && price < 999) {
+            shop_products[i].price = price;
+        }
+        if (*p == ',') p++;
+    }
+}
+
+/* 保存商品价格到 SD 卡 */
+void price_config_save(void)
+{
+    FIL file;
+    FRESULT res;
+    UINT bytes_written;
+    char buf[64];
+
+    snprintf(buf, sizeof(buf), "%d,%d,%d,%d,%d,%d\r\n",
+             (int)shop_products[0].price, (int)shop_products[1].price,
+             (int)shop_products[2].price, (int)shop_products[3].price,
+             (int)shop_products[4].price, (int)shop_products[5].price);
+
+    res = f_open(&file, PRICE_CONFIG_FILE, FA_WRITE | FA_CREATE_ALWAYS);
     if(res != FR_OK) return;
 
     f_write(&file, buf, strlen(buf), &bytes_written);
