@@ -479,18 +479,9 @@ void cart_list_btn_event_cb(lv_event_t* e)
         lv_obj_t* btn = (lv_obj_t*)lv_event_get_target(e);
         if(btn == NULL) return;
 
-        // 获取当前商品项的文字，提取商品名以定位 product
+        // 获取当前商品项的文字
         const char * text = lv_list_get_btn_text(cart_list, btn);
         if(text == NULL) return;
-
-        // 反向查找对应的商品
-        product_t * target_product = NULL;
-        for(uint8_t j = 0; j < MAX_PRODUCTS; j++) {
-            if(strncmp(text, shop_products[j].name, strlen(shop_products[j].name)) == 0) {
-                target_product = &shop_products[j];
-                break;
-            }
-        }
 
         /* 创建操作选择弹窗，获取删除和修改按钮并绑定回调 */
         shop_ui_show_cart_action_menu();

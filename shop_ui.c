@@ -1,5 +1,6 @@
 #include "shop_app.h"
 #include "shop_chinese.h"
+#include "gd32h7xx.h"
 
 
 // 优惠券复选框引用及基文本（供更新显示使用）
@@ -44,6 +45,12 @@ static lv_obj_t * cart_total_label = NULL;   // 购物车实时总价标签
 static lv_obj_t * price_mgmt_screen = NULL; // 价格管理页面
 static lv_obj_t * price_labels[6] = {NULL}; // 6种商品的价格标签
 
+// 价格管理键盘输入相关
+static lv_obj_t * price_input_ta = NULL;      // 价格输入文本框
+static lv_obj_t * price_num_kb = NULL;        // 价格输入键盘
+static lv_obj_t * price_label_full = NULL;    // 价格输入遮罩
+static int price_edit_idx = -1;               // 正在编辑的商品索引
+
 // 默认价格（用于重置）
 static const uint32_t default_prices[MAX_PRODUCTS] = {8, 6, 10, 3, 3, 40};
 
@@ -62,6 +69,11 @@ static void shop_ui_update_coupon_mgmt_display(void);
 static void price_mgmt_btn_home_cb(lv_event_t * e);
 static void price_mgmt_plus_minus_cb(lv_event_t * e);
 static void price_mgmt_reset_cb(lv_event_t * e);
+static void price_label_click_cb(lv_event_t * e);
+static void price_kb_event_cb(lv_event_t * e);
+static void price_overlay_click_cb(lv_event_t * e);
+static void show_price_input_ui(int prod_idx);
+static void hide_price_input_ui(void);
 
 /* 创建主页 */
 void show_home_screen(void)
@@ -101,6 +113,7 @@ void show_home_screen(void)
     lv_obj_set_size(btn_shop, 200, 80);
     lv_obj_align(btn_shop, LV_ALIGN_CENTER, -120, 80);
     lv_obj_set_style_bg_color(btn_shop, lv_palette_main(LV_PALETTE_GREEN), 0);
+    lv_obj_set_style_opa(btn_shop, LV_OPA_90, 0);
     lv_obj_add_event_cb(btn_shop, shop_btn_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t * lbl_shop = lv_label_create(btn_shop);
     lv_label_set_text(lbl_shop, CN_BTN_SHOP);
@@ -112,6 +125,7 @@ void show_home_screen(void)
     lv_obj_set_size(btn_history, 200, 80);
     lv_obj_align(btn_history, LV_ALIGN_CENTER, 120, 80);
     lv_obj_set_style_bg_color(btn_history, lv_palette_main(LV_PALETTE_BLUE), 0);
+    lv_obj_set_style_opa(btn_history, LV_OPA_90, 0);
     lv_obj_add_event_cb(btn_history, history_btn_home_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t * lbl_history = lv_label_create(btn_history);
     lv_label_set_text(lbl_history, CN_BTN_HISTORY);
@@ -123,6 +137,7 @@ void show_home_screen(void)
     lv_obj_set_size(btn_price, 200, 80);
     lv_obj_align(btn_price, LV_ALIGN_CENTER, -120, 200);
     lv_obj_set_style_bg_color(btn_price, lv_palette_main(LV_PALETTE_TEAL), 0);
+    lv_obj_set_style_opa(btn_price, LV_OPA_90, 0);
     lv_obj_add_event_cb(btn_price, price_mgmt_btn_home_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t * lbl_price = lv_label_create(btn_price);
     lv_label_set_text(lbl_price, CN_PRICE_MGMT);
@@ -134,6 +149,7 @@ void show_home_screen(void)
     lv_obj_set_size(btn_manage, 200, 80);
     lv_obj_align(btn_manage, LV_ALIGN_CENTER, 120, 200);
     lv_obj_set_style_bg_color(btn_manage, lv_palette_main(LV_PALETTE_ORANGE), 0);
+    lv_obj_set_style_opa(btn_manage, LV_OPA_90, 0);
     lv_obj_add_event_cb(btn_manage, coupon_mgmt_btn_home_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t * lbl_manage = lv_label_create(btn_manage);
     lv_label_set_text(lbl_manage, CN_COUPON_MGMT);
@@ -267,6 +283,7 @@ void show_shop_screen(void)
     lv_obj_set_size(input_ta, 300, 50);
     lv_obj_align(input_ta, LV_ALIGN_CENTER, 0, -100);
     lv_textarea_set_one_line(input_ta, true);
+    lv_obj_set_style_text_font(input_ta, &ziti, 0);
     lv_obj_add_flag(input_ta, LV_OBJ_FLAG_HIDDEN);
 
     num_kb = lv_keyboard_create(shop_screen);
@@ -709,11 +726,116 @@ static void price_mgmt_reset_cb(lv_event_t * e)
     price_config_save();
 }
 
+// ==================== 价格管理键盘输入 ====================
+
+/* 价格标签点击回调：打开键盘输入 */
+static void price_label_click_cb(lv_event_t * e)
+{
+    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
+    int prod_idx = (int)(uintptr_t)lv_event_get_user_data(e);
+    if (prod_idx < 0 || prod_idx >= MAX_PRODUCTS) return;
+    show_price_input_ui(prod_idx);
+}
+
+/* 价格键盘事件回调 */
+static void price_kb_event_cb(lv_event_t * e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+
+    if (code == LV_EVENT_READY) {
+        if (price_input_ta == NULL || price_edit_idx < 0) return;
+
+        const char * input_str = lv_textarea_get_text(price_input_ta);
+        if (input_str == NULL || strlen(input_str) == 0) {
+            hide_price_input_ui();
+            return;
+        }
+
+        // 解析输入为整数价格
+        int new_price = atoi(input_str);
+        if (new_price <= 0) {
+            // 无效输入，显示错误提示
+            shop_ui_show_msgbox(CN_ERROR, CN_PRICE_INVALID, NULL);
+            led_blink_n(LED_RED, 100, 3);
+            hide_price_input_ui();
+            return;
+        }
+        if (new_price > 9999) new_price = 9999; // 限制上限
+
+        shop_products[price_edit_idx].price = (uint32_t)new_price;
+        shop_ui_update_price_mgmt_display();
+        price_config_save();
+
+        hide_price_input_ui();
+    }
+    else if (code == LV_EVENT_CANCEL) {
+        hide_price_input_ui();
+    }
+}
+
+/* 遮罩点击回调：隐藏键盘 */
+static void price_overlay_click_cb(lv_event_t * e)
+{
+    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
+    hide_price_input_ui();
+}
+
+/* 显示价格输入界面（样式参考购物界面） */
+static void show_price_input_ui(int prod_idx)
+{
+    if (price_input_ta == NULL || price_num_kb == NULL || price_label_full == NULL) return;
+    if (prod_idx < 0 || prod_idx >= MAX_PRODUCTS) return;
+
+    price_edit_idx = prod_idx;
+
+    // 设置提示语和当前价格
+    static char prompt_str[64];
+    snprintf(prompt_str, sizeof(prompt_str), CN_PRICE_NEW_FMT, shop_products[prod_idx].name);
+    lv_textarea_set_placeholder_text(price_input_ta, prompt_str);
+
+    // 预填当前价格
+    char cur_price[16];
+    snprintf(cur_price, sizeof(cur_price), "%d", (int)shop_products[prod_idx].price);
+    lv_textarea_set_text(price_input_ta, cur_price);
+
+    // 关联键盘和文本框
+    lv_keyboard_set_textarea(price_num_kb, price_input_ta);
+
+    // 显示元素（与购物界面相同的样式）
+    lv_obj_clear_flag(price_input_ta, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(price_num_kb, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_clear_flag(price_label_full, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_move_foreground(price_label_full);
+    lv_obj_move_foreground(price_num_kb);
+    lv_obj_move_foreground(price_input_ta);
+}
+
+/* 隐藏价格输入界面 */
+static void hide_price_input_ui(void)
+{
+    if (price_input_ta != NULL) {
+        lv_obj_add_flag(price_input_ta, LV_OBJ_FLAG_HIDDEN);
+        lv_textarea_set_text(price_input_ta, "");
+    }
+    if (price_num_kb != NULL) {
+        lv_obj_add_flag(price_num_kb, LV_OBJ_FLAG_HIDDEN);
+    }
+    if (price_label_full != NULL) {
+        lv_obj_add_flag(price_label_full, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_background(price_label_full);
+    }
+    price_edit_idx = -1;
+}
+
 /* 关闭价格管理界面 */
 void shop_ui_close_price_mgmt_screen(void)
 {
     if (price_mgmt_screen) {
         price_mgmt_screen = NULL;
+        price_input_ta = NULL;
+        price_num_kb = NULL;
+        price_label_full = NULL;
+        price_edit_idx = -1;
         for (int i = 0; i < MAX_PRODUCTS; i++) {
             price_labels[i] = NULL;
         }
@@ -770,13 +892,15 @@ void show_price_mgmt_screen(void)
         lv_obj_set_style_text_font(name_lbl, &ziti_title, 0);
         lv_obj_align(name_lbl, LV_ALIGN_LEFT_MID, 20, 0);
 
-        // 价格标签
+        // 价格标签（点击可弹出键盘输入）
         lv_obj_t * price_lbl = lv_label_create(row);
         price_labels[i] = price_lbl;
         lv_obj_set_style_text_font(price_lbl, &ziti_title, 0);
         lv_obj_set_style_text_color(price_lbl, lv_palette_main(LV_PALETTE_RED), 0);
         lv_label_set_text_fmt(price_lbl, CN_PRICE_CUR_FMT, (int)shop_products[i].price);
         lv_obj_align(price_lbl, LV_ALIGN_RIGHT_MID, -195, 0);
+        lv_obj_add_flag(price_lbl, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(price_lbl, price_label_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)i);
 
         // "-" 按钮
         lv_obj_t * minus_btn = lv_btn_create(row);
@@ -809,6 +933,29 @@ void show_price_mgmt_screen(void)
     lv_label_set_text(reset_lbl, CN_RESET_PRICE);
     lv_obj_set_style_text_font(reset_lbl, &ziti, 0);
     lv_obj_center(reset_lbl);
+
+    // 价格键盘输入元素（样式参考购物界面，默认隐藏）
+    price_input_ta = lv_textarea_create(price_mgmt_screen);
+    lv_obj_set_size(price_input_ta, 300, 50);
+    lv_obj_align(price_input_ta, LV_ALIGN_CENTER, 0, -100);
+    lv_textarea_set_one_line(price_input_ta, true);
+    lv_obj_set_style_text_font(price_input_ta, &ziti, 0);
+    lv_obj_add_flag(price_input_ta, LV_OBJ_FLAG_HIDDEN);
+
+    price_num_kb = lv_keyboard_create(price_mgmt_screen);
+    lv_keyboard_set_mode(price_num_kb, LV_KEYBOARD_MODE_NUMBER);
+    lv_obj_add_flag(price_num_kb, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_event_cb(price_num_kb, price_kb_event_cb, LV_EVENT_ALL, NULL);
+
+    price_label_full = lv_label_create(price_mgmt_screen);
+    lv_label_set_text(price_label_full, "");
+    lv_obj_set_size(price_label_full, 1024, 600);
+    lv_obj_move_background(price_label_full);
+    lv_obj_add_flag(price_label_full, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(price_label_full, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_event_cb(price_label_full, price_overlay_click_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_set_style_bg_color(price_label_full, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(price_label_full, LV_OPA_60, 0);
 
     lv_scr_load_anim(price_mgmt_screen, LV_SCR_LOAD_ANIM_MOVE_LEFT, 300, 0, false);
 }
