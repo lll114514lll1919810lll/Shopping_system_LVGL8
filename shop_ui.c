@@ -10,14 +10,17 @@ static const char * discount_base_texts[] = {
 };
 
 // SDRAM 模拟堆管理 (从 4MB 偏移处开始)
-static uint32_t sdram_heap_ptr = 0xC0000000 + (1024 * 1024 * 4); 
+// PC 模拟器使用 hal_stubs.c 中的 malloc 版本
+#ifndef PC_SIMULATOR
+static uint32_t sdram_heap_ptr = 0xC0000000 + (1024 * 1024 * 4);
 
 void * sdram_malloc(uint32_t size) {
     void * p = (void *)sdram_heap_ptr;
-    sdram_heap_ptr += size; 
+    sdram_heap_ptr += size;
     if(sdram_heap_ptr % 4 != 0) sdram_heap_ptr += (4 - (sdram_heap_ptr % 4));
     return p;
 }
+#endif
 
 // 商品数据定义
 product_t shop_products[MAX_PRODUCTS] = {

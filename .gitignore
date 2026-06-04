@@ -15,9 +15,14 @@ Listings/
 /EventRecorderStub.scvd
 .vscode/
 /back.h
-.github/
+.github/skills/
 *.uvoptx
 *.bak
+
+# PC 模拟器
+pc_simulator/build/
+pc_simulator/sim_data/*
+!pc_simulator/sim_data/*.bin
 
 # Claude Code
 .claude/

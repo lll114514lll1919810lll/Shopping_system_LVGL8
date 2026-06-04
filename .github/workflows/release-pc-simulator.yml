@@ -1,0 +1,68 @@
+name: Release PC Simulator
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.0.0)'
+        required: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install SDL2 via vcpkg
+        run: |
+          cd pc_simulator
+          .\setup.ps1
+
+      - name: Configure CMake
+        run: |
+          cd pc_simulator
+          md build -Force
+          cd build
+          $vcpkgRoot = "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows"
+          cmake .. -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake"
+
+      - name: Build
+        run: |
+          cd pc_simulator/build
+          cmake --build . --config Release
+
+      - name: Prepare package
+        shell: pwsh
+        run: |
+          $pkg = "pc_simulator/package"
+          md $pkg/sim_data -Force
+
+          # 复制 exe 及其依赖
+          Copy-Item pc_simulator/build/Release/shopping_sim.exe $pkg/
+          Copy-Item pc_simulator/build/Release/SDL2.dll $pkg/ 2>$null
+
+          # 复制图片文件（来自 git 跟踪的 sim_data）
+          if (Test-Path pc_simulator/sim_data) {
+            Copy-Item pc_simulator/sim_data/*.bin $pkg/sim_data/
+          }
+
+          # 生成默认数据文件（空文件，第一次运行会自动创建）
+          "" | Out-File -Encoding ascii $pkg/sim_data/transactions.csv
+          "" | Out-File -Encoding ascii $pkg/sim_data/coupon.dat
+          "" | Out-File -Encoding ascii $pkg/sim_data/price.dat
+
+      - name: Create ZIP
+        run: |
+          Compress-Archive -Path pc_simulator/package/* -DestinationPath pc_simulator/shopping_sim_${{ github.ref_name }}.zip
+
+      - name: Upload to Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: pc_simulator/shopping_sim_${{ github.ref_name }}.zip
+          tag: ${{ github.ref_name }}
+          overwrite: true

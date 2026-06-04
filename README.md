@@ -25,7 +25,6 @@
 > 5. **数据持久化** — 优惠券数量、商品价格、交易记录均保存至 SD 卡，掉电不丢失；
 > 6. **SDRAM 大图显示** — 商品图片和主页背景图从 SD 卡加载到 SDRAM，支持 1024×600 高清背景；
 > 7. **LED 状态指示** — 通过 4 色 LED（绿/蓝/黄/红）闪烁反馈操作状态（开机自检、操作成功/失败、SD卡读写等）；
-> 8. **SDRAM 稳定性测试** — 内置 PRBS（伪随机二进制序列）测试程序，可验证 SDRAM 数据完整性。
 
 ## 界面
 
@@ -67,6 +66,39 @@
 > 3. 打开 `TemplateProject.uvprojx` 工程文件；
 > 4. Rebuild All；
 > 5. Download 到开发板。
+
+## PC 模拟器编译运行
+
+本项目提供 PC 模拟器支持，可在 Windows 上直接编译运行 LVGL UI，无需开发板硬件，方便界面调试和功能验证。
+
+### 依赖
+
+- **Visual Studio 2022**（或 2019）含 C++ 桌面开发工作负载
+- **CMake** ≥ 3.15
+- **SDL2** 开发库
+
+### 快速开始
+
+```powershell
+cd pc_simulator
+.\setup.ps1                 # 自动安装 SDL2（使用 vcpkg）
+mkdir build; cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=<vcpkg_root>/scripts/buildsystems/vcpkg.cmake
+cmake --build . --config Release
+.\Release\shopping_sim.exe
+```
+
+> 详细说明请参考 `pc_simulator/README.md`。
+
+### 与原项目的差异
+
+| 项目 | 开发板 | PC 模拟器 |
+|------|--------|----------|
+| 显示 | TLI + LCD | SDL2 窗口 |
+| 触摸 | IIC 触摸屏 | 鼠标 |
+| 存储 | SD 卡 + FATFS | 本地文件系统 |
+| 图片 | SDRAM 缓存 | 堆内存 |
+| LED | GPIO 指示灯 | 控制台输出 |
 
 ## 数据存储说明
 
