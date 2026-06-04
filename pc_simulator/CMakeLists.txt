@@ -104,4 +104,8 @@ if(MSVC)
         /wd4100
         /wd4204
     )
+    # 确保创建控制台应用（显示 printf 输出和 LED 指示）
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        LINK_FLAGS "/SUBSYSTEM:CONSOLE"
+    )
 endif()

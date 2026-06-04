@@ -1,5 +1,4 @@
-# setup.ps1 - Shopping System LVGL PC 模拟器一键构建脚本
-# 用法: powershell -ExecutionPolicy Bypass -File setup.ps1
+# setup.ps1 - Shopping System LVGL PC 模拟器一键构建脚�?# 用法: powershell -ExecutionPolicy Bypass -File setup.ps1
 
 $ErrorActionPreference = "Stop"
 $RootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -11,25 +10,25 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 # ============================================================
-# 1. 检查 CMake
+# 1. 检�?CMake
 # ============================================================
-Write-Host "[1/4] 检查 CMake..." -ForegroundColor Yellow
+Write-Host "[1/4] 检�?CMake..." -ForegroundColor Yellow
 $cmake = Get-Command cmake -ErrorAction SilentlyContinue
 if (-not $cmake) {
-    Write-Host "ERROR: 未找到 CMake。请从 https://cmake.org/download/ 安装" -ForegroundColor Red
+    Write-Host "ERROR: 未找�?CMake。请�?https://cmake.org/download/ 安装" -ForegroundColor Red
     exit 1
 }
 Write-Host "  cmake: $($cmake.Source)" -ForegroundColor Green
 
 # ============================================================
-# 2. 检查/安装 SDL2
+# 2. 检�?安装 SDL2
 # ============================================================
-Write-Host "[2/4] 检查 SDL2..." -ForegroundColor Yellow
+Write-Host "[2/4] 检�?SDL2..." -ForegroundColor Yellow
 
 $SDL2_Found = $false
 $SDL2_DIR = ""
 
-# 方式1: 检查 vcpkg
+# 方式1: 检�?vcpkg
 $vcpkg_sdl = "$env:USERPROFILE\vcpkg\installed\x64-windows\lib\SDL2.lib"
 if (Test-Path $vcpkg_sdl) {
     Write-Host "  找到 vcpkg SDL2: $vcpkg_sdl" -ForegroundColor Green
@@ -37,19 +36,18 @@ if (Test-Path $vcpkg_sdl) {
     $SDL2_DIR = "$env:USERPROFILE\vcpkg\installed\x64-windows"
 }
 
-# 方式2: 检查系统安装
-if (-not $SDL2_Found) {
+# 方式2: 检查系统安�?if (-not $SDL2_Found) {
     $sys_sdl = "C:\SDL2\lib\x64\SDL2.lib"
     if (Test-Path $sys_sdl) {
         Write-Host "  找到 C:\SDL2" -ForegroundColor Green
         $SDL2_Found = $true
         $SDL2_DIR = "C:\SDL2"
     }
-}
 
-# 方式3: 自动下载 vcpkg 和 SDL2
+
+# 方式3: 自动下载 vcpkg �?SDL2
 if (-not $SDL2_Found) {
-    Write-Host "  未找到 SDL2，正在通过 vcpkg 自动安装..." -ForegroundColor Yellow
+    Write-Host "  未找�?SDL2，正在通过 vcpkg 自动安装..." -ForegroundColor Yellow
 
     $vcpkg_root = "$env:USERPROFILE\vcpkg"
     if (-not (Test-Path "$vcpkg_root\vcpkg.exe")) {
@@ -82,17 +80,16 @@ if (-not (Test-Path $SimData)) {
     Write-Host "  创建 $SimData" -ForegroundColor Green
 }
 
-# 创建空的配置文件（如果不存在）
-$empty_files = @("transactions.csv", "coupon.dat", "price.dat")
+# 创建空的配置文件（如果不存在�?$empty_files = @("transactions.csv", "coupon.dat", "price.dat")
 foreach ($f in $empty_files) {
     $path = Join-Path $SimData $f
     if (-not (Test-Path $path)) {
         New-Item -ItemType File -Path $path | Out-Null
-        Write-Host "  创建空文件 $f" -ForegroundColor Green
+        Write-Host "  创建空文�?$f" -ForegroundColor Green
     }
 }
 
-Write-Host "  提示: 将 SD 卡中的 .bin 图片文件复制到 sim_data/ 即可显示商品图片" -ForegroundColor Cyan
+Write-Host "  提示: �?SD 卡中�?.bin 图片文件复制�?sim_data/ 即可显示商品图片" -ForegroundColor Cyan
 
 # ============================================================
 # 4. CMake 配置 & 构建
@@ -106,14 +103,19 @@ if (-not (Test-Path $BuildDir)) {
 
 Push-Location $BuildDir
 
+# ?? vcpkg toolchain ???? CI ?????
+$vcpkg_toolchain = ""
 if ($SDL2_DIR) {
-    $cmake_args = "-DCMAKE_PREFIX_PATH=$SDL2_DIR"
-} else {
-    $cmake_args = ""
+    # ? SDL2_DIR ?? vcpkg root????vcpkg/installed/x64-windows?
+    $vcpkg_candidate = Split-Path (Split-Path $SDL2_DIR)
+    $toolchain = Join-Path $vcpkg_candidate "scripts\buildsystems\vcpkg.cmake"
+    if (Test-Path $toolchain) {
+        $vcpkg_toolchain = "-DCMAKE_TOOLCHAIN_FILE=$toolchain"
+    }
 }
 
-Write-Host "  cmake $cmake_args .."
-cmd /c "cmake $cmake_args .. 2>&1"
+Write-Host "  cmake $vcpkg_toolchain .."
+cmd /c "cmake $vcpkg_toolchain .. 2>&1"
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: CMake 配置失败" -ForegroundColor Red
     Pop-Location

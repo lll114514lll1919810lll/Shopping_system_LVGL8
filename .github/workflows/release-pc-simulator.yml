@@ -50,15 +50,8 @@ jobs:
             if (Test-Path $src) { Copy-Item $src $pkg/; break }
           }
 
-          # 生成占位商品图片（200x200 RGB565，纯色填充，运行时替换为真实图片即可）
-          $img_200x200 = [byte[]]::new(200 * 200 * 2)
-          $products = @("apple", "milk", "bread", "watermelon", "cola", "chocolate")
-          foreach ($name in $products) {
-            [IO.File]::WriteAllBytes("$pkg/sim_data/$name.bin", $img_200x200)
-          }
-          # 背景图占位（1024x600 RGB565）
-          $bg = [byte[]]::new(1024 * 600 * 2)
-          [IO.File]::WriteAllBytes("$pkg/sim_data/background.bin", $bg)
+          # 复制仓库中的商品图片和背景图
+          Copy-Item pc_simulator/sim_data/*.bin $pkg/sim_data/
 
           # 生成默认数据文件
           "" | Out-File -Encoding ascii $pkg/sim_data/transactions.csv
