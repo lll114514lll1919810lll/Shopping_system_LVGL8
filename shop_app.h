@@ -113,6 +113,22 @@ void create_discount_panel(lv_obj_t * parent);
 void shop_ui_update_coupon_display(void);
 void cart_list_btn_event_cb(lv_event_t* e);
 
+/* ==================== 从 shop_ui.c 移入的回调函数 ==================== */
+void shop_btn_cb(lv_event_t * e);                               // 主页购物按钮
+void history_btn_home_cb(lv_event_t * e);                       // 主页交易记录按钮
+void back_btn_cb(lv_event_t * e);                               // 返回主页按钮
+void coupon_mgmt_btn_home_cb(lv_event_t * e);                   // 优惠券管理主页按钮
+void coupon_mgmt_plus_minus_cb(lv_event_t * e);                 // 优惠券 +/- 按钮
+void coupon_mgmt_reset_cb(lv_event_t * e);                      // 优惠券重置按钮
+void price_mgmt_btn_home_cb(lv_event_t * e);                    // 价格管理主页按钮
+void price_mgmt_plus_minus_cb(lv_event_t * e);                  // 价格 +/- 按钮
+void price_mgmt_reset_cb(lv_event_t * e);                       // 价格重置按钮
+void price_label_click_cb(lv_event_t * e);                      // 价格标签点击
+void price_kb_event_cb(lv_event_t * e);                         // 价格键盘事件
+void price_overlay_click_cb(lv_event_t * e);                    // 价格遮罩点击
+void hist_clear_cb(lv_event_t * e);                             // 清空交易记录
+void hist_list_item_cb(lv_event_t * e);                         // 交易历史列表项点击
+
 /* 键盘输入界面控制（供其他模块复用键盘时调用） */
 void show_input_ui(void);                    // 显示键盘输入界面
 void hide_input_ui(void);                    // 隐藏键盘输入界面
@@ -137,6 +153,18 @@ void shop_ui_close_coupon_mgmt_screen(void);                // 关闭优惠券�
 /* ==================== 价格管理界面 ==================== */
 void show_price_mgmt_screen(void);                              // 显示价格管理界面
 void shop_ui_close_price_mgmt_screen(void);                     // 关闭价格管理界面
+void shop_ui_update_shop_prices(void);                          // 刷新购物界面的价格显示
+void shop_ui_update_price_mgmt_display(void);                   // 刷新价格管理页面的显示
+void show_price_input_ui(int prod_idx);                         // 显示价格键盘输入界面
+void hide_price_input_ui(void);                                 // 隐藏价格键盘输入界面
+extern lv_obj_t * price_input_ta;                               // 价格输入文本框
+extern lv_obj_t * price_num_kb;                                 // 价格输入键盘
+extern lv_obj_t * price_label_full;                             // 价格输入遮罩
+extern int price_edit_idx;                                      // 正在编辑的商品索引
+extern const uint32_t default_prices[MAX_PRODUCTS];             // 默认价格
+
+/* ==================== 优惠券管理界面 ==================== */
+void shop_ui_update_coupon_mgmt_display(void);                  // 刷新优惠券管理页面的显示
 
 /* ==================== \"再来一单\" 回调 ==================== */
 void reorder_btn_cb(lv_event_t * e);extern bool reorder_pending;                               // 再来一单待处理标记

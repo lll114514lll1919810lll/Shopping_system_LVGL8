@@ -47,15 +47,16 @@ static lv_obj_t * coupon_count_labels[4] = {NULL}; // 管理页面中4种优惠�
 static lv_obj_t * cart_total_label = NULL;   // 购物车实时总价标签
 static lv_obj_t * price_mgmt_screen = NULL; // 价格管理页面
 static lv_obj_t * price_labels[6] = {NULL}; // 6种商品的价格标签
+static lv_obj_t * shop_price_labels[MAX_PRODUCTS] = {NULL}; // 购物界面商品价格标签
 
 // 价格管理键盘输入相关
-static lv_obj_t * price_input_ta = NULL;      // 价格输入文本框
-static lv_obj_t * price_num_kb = NULL;        // 价格输入键盘
-static lv_obj_t * price_label_full = NULL;    // 价格输入遮罩
-static int price_edit_idx = -1;               // 正在编辑的商品索引
+lv_obj_t * price_input_ta = NULL;      // 价格输入文本框
+lv_obj_t * price_num_kb = NULL;        // 价格输入键盘
+lv_obj_t * price_label_full = NULL;    // 价格输入遮罩
+int price_edit_idx = -1;               // 正在编辑的商品索引
 
 // 默认价格（用于重置）
-static const uint32_t default_prices[MAX_PRODUCTS] = {800, 600, 1000, 300, 300, 4000};
+const uint32_t default_prices[MAX_PRODUCTS] = {800, 600, 1000, 300, 300, 4000};
 
 // 主页背景图片
 static lv_img_dsc_t bg_img_dsc;
@@ -64,24 +65,7 @@ static uint8_t * bg_img_buffer = NULL;
 // 当前查看的交易明细指针（供"再来一单"使用）
 transaction_t * current_detail_tx = NULL;
 
-// 前向声明
-static void shop_btn_cb(lv_event_t * e);
-static void history_btn_home_cb(lv_event_t * e);
-static void back_btn_cb(lv_event_t * e);
-static void coupon_mgmt_btn_home_cb(lv_event_t * e);
-static void coupon_mgmt_plus_minus_cb(lv_event_t * e);
-static void coupon_mgmt_reset_cb(lv_event_t * e);
-static void shop_ui_update_coupon_mgmt_display(void);
-static void price_mgmt_btn_home_cb(lv_event_t * e);
-static void price_mgmt_plus_minus_cb(lv_event_t * e);
-static void price_mgmt_reset_cb(lv_event_t * e);
-static void price_label_click_cb(lv_event_t * e);
-static void price_kb_event_cb(lv_event_t * e);
-static void price_overlay_click_cb(lv_event_t * e);
-static void show_price_input_ui(int prod_idx);
-static void hide_price_input_ui(void);
-
-// 前向声明（续）
+// 前向声明（回调函数已移至 shop_callbacks.c，UI 辅助函数声明在 shop_app.h）
 
 /* 创建主页 */
 void show_home_screen(void)
@@ -169,27 +153,8 @@ void show_home_screen(void)
 }
 
 /* 主页购物按钮回调 */
-static void shop_btn_cb(lv_event_t * e)
-{
-    (void)e;
-    show_shop_screen();
-}
-
 /* 主页交易记录按钮回调 */
-static void history_btn_home_cb(lv_event_t * e)
-{
-    (void)e;
-    show_history_panel();
-}
-
-/* 返回主页按钮回调（购物界面和交易记录界面共用） */
-static void back_btn_cb(lv_event_t * e)
-{
-    (void)e;
-    // 只切换屏幕，不删除任何屏幕，防止操作当前活动屏幕导致崩溃
-    show_home_screen();
-}
-
+/* 返回主页按钮回调 */
 /* 显示购物界面 */
 void show_shop_screen(void)
 {
@@ -235,6 +200,7 @@ void show_shop_screen(void)
             shop_ui_update_cart_total();
         }
 
+        shop_ui_update_shop_prices();
         shop_ui_update_coupon_display();
         return;
     }
@@ -290,6 +256,7 @@ void show_shop_screen(void)
 
         // 创建价格标签（小字体）
         lv_obj_t * price_label = lv_label_create(item_cont);
+        shop_price_labels[i] = price_label;  // 保存引用，供价格变更后刷新
         lv_label_set_text_fmt(price_label, "#ff0000 %d.%02d " CN_YUAN "# / %s",
                               shop_products[i].price / 100, shop_products[i].price % 100,
                               shop_products[i].unit);
@@ -579,14 +546,8 @@ void shop_ui_update_coupon_display(void)
 }
 
 /* 优惠券管理主页按钮回调 */
-static void coupon_mgmt_btn_home_cb(lv_event_t * e)
-{
-    (void)e;
-    show_coupon_mgmt_screen();
-}
-
 /* 更新优惠券管理页面的数量显示 */
-static void shop_ui_update_coupon_mgmt_display(void)
+void shop_ui_update_coupon_mgmt_display(void)
 {
     for (int i = 0; i < 4; i++) {
         lv_obj_t * lbl = coupon_count_labels[i];
@@ -597,49 +558,7 @@ static void shop_ui_update_coupon_mgmt_display(void)
 }
 
 /* +/- 按钮回调：修改优惠券数量 */
-static void coupon_mgmt_plus_minus_cb(lv_event_t * e)
-{
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
-
-    lv_obj_t * btn = lv_event_get_target(e);
-    int coupon_idx = (int)(uintptr_t)lv_event_get_user_data(e);
-    if (coupon_idx < 1 || coupon_idx > 4) return;
-
-    // 通过按钮的第一个子对象（标签）的文本判断是 + 还是 -
-    lv_obj_t * lbl = lv_obj_get_child(btn, 0);
-    if (lbl == NULL) return;
-    const char * txt = lv_label_get_text(lbl);
-    if (txt == NULL) return;
-
-    if (txt[0] == '+') {
-        if (coupon_remaining[coupon_idx] < 999) {
-            coupon_remaining[coupon_idx]++;
-        }
-    } else if (txt[0] == '-') {
-        if (coupon_remaining[coupon_idx] > 0) {
-            coupon_remaining[coupon_idx]--;
-        }
-    }
-
-    shop_ui_update_coupon_mgmt_display();
-    shop_ui_update_coupon_display();
-    coupon_config_save();  // 持久化到SD卡
-}
-
 /* 重置按钮回调：全部恢复为10张 */
-static void coupon_mgmt_reset_cb(lv_event_t * e)
-{
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
-
-    for (int i = 1; i <= 4; i++) {
-        coupon_remaining[i] = 10;
-    }
-
-    shop_ui_update_coupon_mgmt_display();
-    shop_ui_update_coupon_display();
-    coupon_config_save();  // 持久化到SD卡
-}
-
 /* 关闭优惠券管理界面 */
 void shop_ui_close_coupon_mgmt_screen(void)
 {
@@ -755,14 +674,8 @@ void shop_ui_init(void)
 // ==================== 价格管理界面 ====================
 
 /* 主页价格管理按钮回调 */
-static void price_mgmt_btn_home_cb(lv_event_t * e)
-{
-    (void)e;
-    show_price_mgmt_screen();
-}
-
 /* 更新价格管理页面的价格显示 */
-static void shop_ui_update_price_mgmt_display(void)
+void shop_ui_update_price_mgmt_display(void)
 {
     for (int i = 0; i < MAX_PRODUCTS; i++) {
         lv_obj_t * lbl = price_labels[i];
@@ -771,104 +684,30 @@ static void shop_ui_update_price_mgmt_display(void)
     }
 }
 
-/* +/- 按钮回调：修改商品价格 */
-static void price_mgmt_plus_minus_cb(lv_event_t * e)
+/* 更新购物界面的商品价格显示（价格变更后自动刷新） */
+void shop_ui_update_shop_prices(void)
 {
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
-
-    lv_obj_t * btn = lv_event_get_target(e);
-    int prod_idx = (int)(uintptr_t)lv_event_get_user_data(e);
-    if (prod_idx < 0 || prod_idx >= MAX_PRODUCTS) return;
-
-    lv_obj_t * lbl = lv_obj_get_child(btn, 0);
-    if (lbl == NULL) return;
-    const char * txt = lv_label_get_text(lbl);
-    if (txt == NULL) return;
-
-    if (txt[0] == '+') {
-        if (shop_products[prod_idx].price < 99999) {
-            shop_products[prod_idx].price += 50;  // 每次增加0.50元
-        }
-    } else if (txt[0] == '-') {
-        if (shop_products[prod_idx].price > 50) {
-            shop_products[prod_idx].price -= 50;  // 每次减少0.50元，最低保留0.50元
-        }
-    }
-
-    shop_ui_update_price_mgmt_display();
-    price_config_save();
-}
-
-/* 重置按钮回调：恢复默认价格 */
-static void price_mgmt_reset_cb(lv_event_t * e)
-{
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
-
     for (int i = 0; i < MAX_PRODUCTS; i++) {
-        shop_products[i].price = default_prices[i];
+        lv_obj_t * lbl = shop_price_labels[i];
+        if (lbl == NULL) continue;
+        lv_label_set_text_fmt(lbl, "#ff0000 %d.%02d " CN_YUAN "# / %s",
+                              shop_products[i].price / 100, shop_products[i].price % 100,
+                              shop_products[i].unit);
+        lv_label_set_recolor(lbl, true);
     }
-
-    shop_ui_update_price_mgmt_display();
-    price_config_save();
 }
+
+/* +/- 按钮回调：修改商品价格 */
+/* 重置按钮回调：恢复默认价格 */
 
 // ==================== 价格管理键盘输入 ====================
 
 /* 价格标签点击回调：打开键盘输入 */
-static void price_label_click_cb(lv_event_t * e)
-{
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
-    int prod_idx = (int)(uintptr_t)lv_event_get_user_data(e);
-    if (prod_idx < 0 || prod_idx >= MAX_PRODUCTS) return;
-    show_price_input_ui(prod_idx);
-}
-
 /* 价格键盘事件回调 */
-static void price_kb_event_cb(lv_event_t * e)
-{
-    lv_event_code_t code = lv_event_get_code(e);
-
-    if (code == LV_EVENT_READY) {
-        if (price_input_ta == NULL || price_edit_idx < 0) return;
-
-        const char * input_str = lv_textarea_get_text(price_input_ta);
-        if (input_str == NULL || strlen(input_str) == 0) {
-            hide_price_input_ui();
-            return;
-        }
-
-        // 解析输入为整数价格
-        float new_price_float = atof(input_str);
-        int new_price = (int)(new_price_float * 100.0f + 0.5f);  // 转为分
-        if (new_price <= 0) {
-            // 无效输入，显示错误提示
-            shop_ui_show_msgbox(CN_ERROR, CN_PRICE_INVALID, NULL);
-            led_blink_n(LED_RED, 70, 3);
-            hide_price_input_ui();
-            return;
-        }
-        if (new_price > 99999) new_price = 99999; // 限制上限 999.99元
-
-        shop_products[price_edit_idx].price = (uint32_t)new_price;
-        shop_ui_update_price_mgmt_display();
-        price_config_save();
-
-        hide_price_input_ui();
-    }
-    else if (code == LV_EVENT_CANCEL) {
-        hide_price_input_ui();
-    }
-}
-
 /* 遮罩点击回调：隐藏键盘 */
-static void price_overlay_click_cb(lv_event_t * e)
-{
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
-    hide_price_input_ui();
-}
 
 /* 显示价格输入界面（样式参考购物界面） */
-static void show_price_input_ui(int prod_idx)
+void show_price_input_ui(int prod_idx)
 {
     if (price_input_ta == NULL || price_num_kb == NULL || price_label_full == NULL) return;
     if (prod_idx < 0 || prod_idx >= MAX_PRODUCTS) return;
@@ -898,7 +737,7 @@ static void show_price_input_ui(int prod_idx)
 }
 
 /* 隐藏价格输入界面 */
-static void hide_price_input_ui(void)
+void hide_price_input_ui(void)
 {
     if (price_input_ta != NULL) {
         lv_obj_add_flag(price_input_ta, LV_OBJ_FLAG_HIDDEN);
@@ -1669,10 +1508,7 @@ lv_obj_t * shop_ui_show_cart_action_menu(void)
 // ==================== 交易历史面板辅助 ====================
 
 static lv_obj_t * hist_list  = NULL;    // 可滚动列表容器
-
-static void hist_list_item_cb(lv_event_t * e);  // 前向声明
-static void hist_clear_cb(lv_event_t * e) { (void)e; tx_log_clear(); shop_ui_refresh_history_list(); }
-
+/* 清空交易记录回调 */
 /* 获取折扣描述文字 */
 static const char * get_discount_desc_str(tx_discount_type_t type)
 {
@@ -1825,13 +1661,6 @@ void shop_ui_show_tx_detail(transaction_t * tx)
 }
 
 /* 点击交易行 → 显示详情弹窗（回调） */
-static void hist_list_item_cb(lv_event_t * e)
-{
-    int idx = (int)(uintptr_t)lv_event_get_user_data(e);
-    if(idx < 0 || idx >= (int)tx_log.count) return;
-    shop_ui_show_tx_detail(&tx_log.records[idx]);
-}
-
 /* 刷新历史列表（显示全部记录，最新在前） */
 void shop_ui_refresh_history_list(void)
 {
