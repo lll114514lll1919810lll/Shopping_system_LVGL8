@@ -16,6 +16,10 @@ static lv_coord_t mouse_x = 0;
 static lv_coord_t mouse_y = 0;
 static int mouse_pressed = 0;
 
+/* 鼠标坐标钳位到屏幕范围 */
+static inline lv_coord_t clamp_x(int v) { return v < 0 ? 0 : (v > 1023 ? 1023 : (lv_coord_t)v); }
+static inline lv_coord_t clamp_y(int v) { return v < 0 ? 0 : (v > 599  ? 599  : (lv_coord_t)v); }
+
 /* 输入的 LVGL 设备 */
 static lv_indev_t *indev_pointer = NULL;
 static lv_group_t *input_group = NULL;
@@ -70,8 +74,8 @@ int lv_port_indev_handle_sdl_event(const SDL_Event *event) {
     case SDL_MOUSEBUTTONDOWN:
         if (event->button.button == SDL_BUTTON_LEFT) {
             /* 钳位到屏幕范围内，避免负坐标警告 */
-            mouse_x = (lv_coord_t)(event->button.x < 0 ? 0 : event->button.x);
-            mouse_y = (lv_coord_t)(event->button.y < 0 ? 0 : event->button.y);
+            mouse_x = clamp_x(event->button.x);
+            mouse_y = clamp_y(event->button.y);
             mouse_pressed = 1;
             return 1;
         }
@@ -88,8 +92,8 @@ int lv_port_indev_handle_sdl_event(const SDL_Event *event) {
     case SDL_MOUSEMOTION:
         if (mouse_pressed) {
             /* 拖拽时钳位到屏幕范围内 */
-            mouse_x = (lv_coord_t)(event->motion.x < 0 ? 0 : event->motion.x);
-            mouse_y = (lv_coord_t)(event->motion.y < 0 ? 0 : event->motion.y);
+            mouse_x = clamp_x(event->motion.x);
+            mouse_y = clamp_y(event->motion.y);
             return 1;
         }
         break;
