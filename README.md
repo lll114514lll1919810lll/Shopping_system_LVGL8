@@ -94,9 +94,10 @@ cd pc_simulator
 mkdir build; cd build
 cmake .. -DCMAKE_TOOLCHAIN_FILE=<vcpkg_root>/scripts/buildsystems/vcpkg.cmake
 cmake --build . --config Release
-.\Release\shopping_sim.exe    # 或 .\Debug\shopping_sim.exe（取决于 --config 参数）
+.\shopping_sim.exe
 ```
 
+> 必需文件：shopping_sim.exe, SDL2.dll, sim_data\\*.bin  
 > 详细说明请参考 `pc_simulator/README.md`。
 
 ### 与原项目的差异

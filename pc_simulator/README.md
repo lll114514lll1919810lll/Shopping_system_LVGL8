@@ -58,6 +58,8 @@ cmake --build . --config Release
 .\Release\shopping_sim.exe
 ```
 
+> 注：不确定编译产物的具体目录，请根据实际情况处理。
+
 ### 4. 操作方式
 
 - **鼠标点击** = 触摸屏操作
