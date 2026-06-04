@@ -6,8 +6,16 @@
  * 编译时通过 -DLV_CONF_INCLUDE_SIMPLE 让 LVGL 优先找到此文件。
  */
 
-#ifndef LV_CONF_H
-#define LV_CONF_H
+/* 注意：不使用 LV_CONF_H 作为 include guard（与 lvgl/lv_conf.h 冲突），
+   改用 #pragma once + 唯一宏 PC_SIM_LV_CONF_H，并在关键宏前用 #undef 确保覆盖 */
+#pragma once
+#ifndef PC_SIM_LV_CONF_H
+#define PC_SIM_LV_CONF_H
+
+/* 强制覆盖：无论 lvgl/lv_conf.h 是否已定义，我们的值必须生效 */
+#undef LV_MEMCPY_MEMSET_STD
+#undef LV_SPRINTF_CUSTOM
+#undef LV_USE_FS_FATFS
 
 #include <stdint.h>
 
@@ -271,4 +279,4 @@
 #define LV_USE_DEMO_STRESS      0
 #define LV_USE_DEMO_MUSIC       0
 
-#endif /* LV_CONF_H */
+#endif /* PC_LV_CONF_H */
