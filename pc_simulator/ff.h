@@ -31,6 +31,8 @@ typedef struct {
     uint32_t fsize;
     uint16_t fdate;
     uint16_t ftime;
+    uint8_t  fattrib;          /* 文件属性标志，用于 lv_fs_fatfs */
+    char     fname[256];       /* 短文件名，用于 lv_fs_fatfs */
 } FILINFO;
 
 typedef enum {

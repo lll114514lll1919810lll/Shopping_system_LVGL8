@@ -100,6 +100,8 @@ FRESULT f_stat(const char *path, FILINFO *fno) {
     fseek(f, 0, SEEK_END);
     fno->fsize = (uint32_t)ftell(f);
     fno->fdate = fno->ftime = 0;
+    fno->fattrib = AM_ARC;                /* 模拟为归档文件 */
+    fno->fname[0] = '\0';                 /* 不返回文件名 */
     fclose(f);
     return FR_OK;
 }
