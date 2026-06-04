@@ -19,21 +19,16 @@ jobs:
 
       - name: Install SDL2 via vcpkg
         run: |
-          cd pc_simulator
-          .\setup.ps1
+          vcpkg install sdl2:x64-windows
 
       - name: Configure CMake
         run: |
-          cd pc_simulator
-          md build -Force
-          cd build
-          $vcpkgRoot = "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows"
-          cmake .. -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake"
+          cmake -S pc_simulator -B pc_simulator/build `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT\scripts\buildsystems\vcpkg.cmake"
 
       - name: Build
         run: |
-          cd pc_simulator/build
-          cmake --build . --config Release
+          cmake --build pc_simulator/build --config Release
 
       - name: Prepare package
         shell: pwsh
@@ -43,7 +38,14 @@ jobs:
 
           # 复制 exe 及其依赖
           Copy-Item pc_simulator/build/Release/shopping_sim.exe $pkg/
-          Copy-Item pc_simulator/build/Release/SDL2.dll $pkg/ 2>$null
+          # SDL2.dll 可能在 build 输出目录或 vcpkg 安装目录
+          $sdl2_sources = @(
+            "pc_simulator/build/Release/SDL2.dll",
+            "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin/SDL2.dll"
+          )
+          foreach ($src in $sdl2_sources) {
+            if (Test-Path $src) { Copy-Item $src $pkg/; break }
+          }
 
           # 复制图片文件（来自 git 跟踪的 sim_data）
           if (Test-Path pc_simulator/sim_data) {

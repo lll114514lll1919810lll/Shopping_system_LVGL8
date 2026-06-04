@@ -49,6 +49,8 @@ file(GLOB_RECURSE LVGL_SOURCES
 list(FILTER LVGL_SOURCES EXCLUDE REGEX ".*lv_objx_templ\\.c$")
 # 排除示例 porting 文件（我们用自定义的）
 list(FILTER LVGL_SOURCES EXCLUDE REGEX ".*porting.*")
+# 排除 FatFS 驱动（PC 模拟器使用 ff_stdio_adapter 代替）
+list(FILTER LVGL_SOURCES EXCLUDE REGEX ".*lv_fs_fatfs\\.c$")
 
 # 5. LVGL 内置字体（Montserrat 14/18/24，已启用）
 # 已通过 file(GLOB_RECURSE ...) 自动收集
