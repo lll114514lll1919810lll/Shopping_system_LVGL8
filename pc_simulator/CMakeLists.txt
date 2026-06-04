@@ -84,6 +84,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     LV_CONF_INCLUDE_SIMPLE                # 令 LVGL 在 include path 中搜索 lv_conf.h
     PC_SIMULATOR                          # 禁用 shop_ui.c 中硬件相关的 sdram_malloc
+    # 强制覆盖关键配置（解决 MSVC __has_include 可能找到原版 lv_conf.h 的问题）
+    LV_USE_FS_FATFS=0                     # PC 模拟器不使用 FATFS
+    LV_MEMCPY_MEMSET_STD=1                # 使用标准库 memcpy/memset
+    LV_SPRINTF_CUSTOM=1                   # 使用标准库 snprintf
 )
 
 # ============================================================

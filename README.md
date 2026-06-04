@@ -79,13 +79,22 @@
 
 ### 快速开始
 
+**方式一：一键脚本（推荐）**
+
 ```powershell
 cd pc_simulator
-.\setup.ps1                 # 自动安装 SDL2（使用 vcpkg）
+.\setup.ps1                 # 自动安装 SDL2 + CMake 配置 + 编译
+.\build\Release\shopping_sim.exe
+```
+
+**方式二：手动编译**
+
+```powershell
+cd pc_simulator
 mkdir build; cd build
 cmake .. -DCMAKE_TOOLCHAIN_FILE=<vcpkg_root>/scripts/buildsystems/vcpkg.cmake
 cmake --build . --config Release
-.\Release\shopping_sim.exe
+.\Release\shopping_sim.exe    # 或 .\Debug\shopping_sim.exe（取决于 --config 参数）
 ```
 
 > 详细说明请参考 `pc_simulator/README.md`。
