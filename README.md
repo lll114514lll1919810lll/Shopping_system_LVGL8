@@ -54,8 +54,6 @@
 ├── shop_chinese.h         # 中文字符串定义（UTF-8 转义序列）
 ├── tx_log.c               # 交易记录管理（SD卡读写、CSV解析）
 ├── read_file_to_array.c   # SD卡文件读取工具函数
-├── memory_test.c          # SDRAM PRBS 稳定性测试
-├── Hang2Hang.c            # 图片资源数据（LVGL 格式）
 ├── Drivers/               # 硬件驱动（LCD、触摸、SD卡、SDRAM、LED）
 ├── FATFS/                 # FatFS 文件系统
 ├── lvgl/                  # LVGL 图形库
