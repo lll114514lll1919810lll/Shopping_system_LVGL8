@@ -69,8 +69,9 @@ int lv_port_indev_handle_sdl_event(const SDL_Event *event) {
 
     case SDL_MOUSEBUTTONDOWN:
         if (event->button.button == SDL_BUTTON_LEFT) {
-            mouse_x = (lv_coord_t)event->button.x;
-            mouse_y = (lv_coord_t)event->button.y;
+            /* 钳位到屏幕范围内，避免负坐标警告 */
+            mouse_x = (lv_coord_t)(event->button.x < 0 ? 0 : event->button.x);
+            mouse_y = (lv_coord_t)(event->button.y < 0 ? 0 : event->button.y);
             mouse_pressed = 1;
             return 1;
         }
@@ -78,8 +79,7 @@ int lv_port_indev_handle_sdl_event(const SDL_Event *event) {
 
     case SDL_MOUSEBUTTONUP:
         if (event->button.button == SDL_BUTTON_LEFT) {
-            mouse_x = (lv_coord_t)event->button.x;
-            mouse_y = (lv_coord_t)event->button.y;
+            /* 释放时保持最后有效坐标，不更新（防止鼠标移出窗口后出现负坐标） */
             mouse_pressed = 0;
             return 1;
         }
@@ -87,8 +87,9 @@ int lv_port_indev_handle_sdl_event(const SDL_Event *event) {
 
     case SDL_MOUSEMOTION:
         if (mouse_pressed) {
-            mouse_x = (lv_coord_t)event->motion.x;
-            mouse_y = (lv_coord_t)event->motion.y;
+            /* 拖拽时钳位到屏幕范围内 */
+            mouse_x = (lv_coord_t)(event->motion.x < 0 ? 0 : event->motion.x);
+            mouse_y = (lv_coord_t)(event->motion.y < 0 ? 0 : event->motion.y);
             return 1;
         }
         break;
