@@ -790,8 +790,8 @@ static void price_mgmt_plus_minus_cb(lv_event_t * e)
             shop_products[prod_idx].price += 50;  // 每次增加0.50元
         }
     } else if (txt[0] == '-') {
-        if (shop_products[prod_idx].price >= 50) {
-            shop_products[prod_idx].price -= 50;  // 每次减少0.50元
+        if (shop_products[prod_idx].price > 50) {
+            shop_products[prod_idx].price -= 50;  // 每次减少0.50元，最低保留0.50元
         }
     }
 
@@ -932,6 +932,9 @@ void shop_ui_close_price_mgmt_screen(void)
 /* 显示价格管理界面 */
 void show_price_mgmt_screen(void)
 {
+    // 每次打开时重新从 SD 卡加载价格，确保显示持久化的数据
+    price_config_load();
+
     if (price_mgmt_screen) {
         lv_scr_load_anim(price_mgmt_screen, LV_SCR_LOAD_ANIM_MOVE_LEFT, 300, 0, false);
         shop_ui_update_price_mgmt_display();
