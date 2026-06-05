@@ -1378,8 +1378,33 @@ static void close_detail_popup(lv_event_t * e)
     lv_anim_start(&a);
 }
 
+/* 删除记录按钮回调 */
+static void detail_delete_btn_cb(lv_event_t * e)
+{
+    lv_obj_t * overlay = (lv_obj_t *)lv_event_get_user_data(e);
+    if(overlay == NULL) return;
+
+    uint8_t tx_index = (uint8_t)(uintptr_t)lv_obj_get_user_data(overlay);
+
+    // 删除记录
+    tx_log_delete(tx_index);
+
+    // 关闭弹窗
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, overlay);
+    lv_anim_set_exec_cb(&a, (lv_anim_exec_xcb_t)lv_obj_set_style_opa);
+    lv_anim_set_values(&a, LV_OPA_COVER, LV_OPA_TRANSP);
+    lv_anim_set_time(&a, 100);
+    lv_anim_set_ready_cb(&a, close_detail_del_cb);
+    lv_anim_start(&a);
+
+    // 刷新列表
+    shop_ui_refresh_history_list();
+}
+
 /* 交易详情弹窗 */
-void shop_ui_show_tx_detail(transaction_t * tx)
+void shop_ui_show_tx_detail(transaction_t * tx, uint8_t tx_index)
 {
     if(tx == NULL) return;
 
@@ -1391,6 +1416,7 @@ void shop_ui_show_tx_detail(transaction_t * tx)
     lv_obj_set_style_bg_opa(overlay, LV_OPA_60, 0);
     lv_obj_clear_flag(overlay, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_event_cb(overlay, close_detail_popup, LV_EVENT_CLICKED, overlay);
+    lv_obj_set_user_data(overlay, (void *)(uintptr_t)tx_index);
 
     // 弹窗
     lv_obj_t * popup = lv_obj_create(overlay);
@@ -1460,14 +1486,36 @@ void shop_ui_show_tx_detail(transaction_t * tx)
         }
     }
 
+    // 底部按钮容器
+    lv_obj_t * btn_cont = lv_obj_create(popup);
+    lv_obj_set_width(btn_cont, lv_pct(100));
+    lv_obj_set_height(btn_cont, 40);
+    lv_obj_set_flex_flow(btn_cont, LV_FLEX_FLOW_ROW);
+    lv_obj_set_style_border_width(btn_cont, 0, 0);
+    lv_obj_set_style_bg_opa(btn_cont, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_pad_all(btn_cont, 0, 0);
+    lv_obj_set_style_pad_gap(btn_cont, 10, 0);
+    lv_obj_clear_flag(btn_cont, LV_OBJ_FLAG_SCROLLABLE);
+
+    // 删除按钮
+    lv_obj_t * delete_btn = lv_btn_create(btn_cont);
+    lv_obj_set_width(delete_btn, lv_pct(45));
+    lv_obj_set_style_bg_color(delete_btn, lv_palette_main(LV_PALETTE_RED), 0);
+    lv_obj_add_event_cb(delete_btn, detail_delete_btn_cb, LV_EVENT_CLICKED, overlay);
+    lv_obj_t * del_lbl = lv_label_create(delete_btn);
+    lv_label_set_text(del_lbl, CN_DELETE_RECORD);
+    lv_obj_set_style_text_font(del_lbl, &ziti, 0);
+    lv_obj_center(del_lbl);
+
     // 关闭按钮
-    lv_obj_t * close_btn = lv_btn_create(popup);
-    lv_obj_set_width(close_btn, lv_pct(50));
+    lv_obj_t * close_btn = lv_btn_create(btn_cont);
+    lv_obj_set_width(close_btn, lv_pct(45));
     lv_obj_set_style_bg_color(close_btn, lv_palette_main(LV_PALETTE_BLUE), 0);
     lv_obj_add_event_cb(close_btn, close_detail_popup, LV_EVENT_CLICKED, overlay);
     lv_obj_t * close_lbl = lv_label_create(close_btn);
     lv_label_set_text(close_lbl, CN_OK);
     lv_obj_set_style_text_font(close_lbl, &ziti, 0);
+    lv_obj_center(close_lbl);
 
     lv_obj_fade_in(overlay, 150, 0);
 }

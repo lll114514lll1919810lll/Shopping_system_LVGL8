@@ -44,6 +44,25 @@ void tx_log_clear(void)
     f_unlink(TX_LOG_FILE);
 }
 
+/* 删除指定索引的记录 */
+void tx_log_delete(uint8_t index)
+{
+    if(index >= tx_log.count) return;
+
+    for(uint8_t i = index; i < tx_log.count - 1; i++) {
+        tx_log.records[i] = tx_log.records[i + 1];
+    }
+    tx_log.count--;
+
+    // 重新编号，后面的序号补位
+    for(uint8_t i = 0; i < tx_log.count; i++) {
+        tx_log.records[i].id = i + 1;
+    }
+    tx_log.next_id = tx_log.count + 1;
+
+    tx_log_save_to_sd();
+}
+
 /* 保存到 SD 卡，CSV 格式 */
 int tx_log_save_to_sd(void)
 {

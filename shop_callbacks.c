@@ -839,5 +839,5 @@ void hist_list_item_cb(lv_event_t * e)
 {
     int idx = (int)(uintptr_t)lv_event_get_user_data(e);
     if(idx < 0 || idx >= (int)tx_log.count) return;
-    shop_ui_show_tx_detail(&tx_log.records[idx]);
+    shop_ui_show_tx_detail(&tx_log.records[idx], (uint8_t)idx);
 }

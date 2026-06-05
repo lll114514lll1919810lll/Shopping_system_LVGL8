@@ -155,6 +155,7 @@ void hide_password_ui(void);
 void tx_log_init(void);
 void tx_log_add(transaction_t * tx);
 void tx_log_clear(void);
+void tx_log_delete(uint8_t index);
 int tx_log_save_to_sd(void);
 int tx_log_load_from_sd(void);
 void show_history_panel(void);
@@ -162,7 +163,7 @@ void history_btn_event_cb(lv_event_t * e);
 void shop_ui_close_shop_screen(void);
 void shop_ui_close_history_panel(void);
 void shop_ui_refresh_history_list(void);
-void shop_ui_show_tx_detail(transaction_t * tx);
+void shop_ui_show_tx_detail(transaction_t * tx, uint8_t tx_index);
 void hist_clear_cb(lv_event_t * e);
 void hist_list_item_cb(lv_event_t * e);
 
