@@ -1,12 +1,7 @@
 #ifndef _SHOP_CHINESE_H
 #define _SHOP_CHINESE_H
 
-/*
- * UTF-8 预编码中文字符串
- * 用于 ARMCC5 编译器 (源文件为 GBK/ANSI 编码时使用)
- * LVGL 文本渲染需要 UTF-8，但 ARMCC5 不支持 UTF-8 源文件
- * 因此这里用 \x 转义序列直接写入 UTF-8 字节
- */
+/* UTF-8 预编码中文字符串 (ARMCC5 不支持 UTF-8 源文件) */
 
 // 商品名称
 #define CN_APPLE      "\xe8\x8b\xb9\xe6\x9e\x9c"            // 苹果
@@ -100,6 +95,9 @@
 #define CN_RESET_PRICE  "\xe9\x87\x8d\xe7\xbd\xae\xe4\xb8\xba\xe9\xbb\x98\xe8\xae\xa4\xe4\xbb\xb7\xe6\xa0\xbc"  // 重置为默认价格
 #define CN_PRICE_NEW_FMT "\xe8\xaf\xb7\xe8\xbe\x93\xe5\x85\xa5 %s \xe7\x9a\x84\xe4\xbb\xb7\xe6\xa0\xbc:"  // 请输入 %s 的价格:
 #define CN_PRICE_INVALID "\xe4\xbb\xb7\xe6\xa0\xbc\xe5\xbf\x85\xe9\xa1\xbb\xe5\xa4\xa7\xe4\xba\x8e" "0"  // 价格必须大于0
-#define CN_REORDER      "\xe5\x86\x8d\xe6\x9d\xa5\xe4\xb8\x80\xe5\x8d\x95"              // 再来一单
+// 密码验证
+#define CN_PASSWORD_TITLE       "\xe8\xaf\xb7\xe8\xbe\x93\xe5\x85\xa5\xe5\xaf\x86\xe7\xa0\x81"  // 请输入密码
+#define CN_PASSWORD_WRONG       "Wrong Password"
+#define CN_PASSWORD_PLACEHOLDER "\xe8\xbe\x93\xe5\x85\xa5\xe5\xaf\x86\xe7\xa0\x81\xe5\x90\x8e\xe6\x8c\x89\xe2\x9c\x93"  // 输入密码后按✓
 
 #endif
