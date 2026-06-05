@@ -65,7 +65,7 @@
 #define CN_DESC_DISC_90PCT         " (9" "\xe6\x8a\x98" ")"                                        //  (9折)
 #define CN_DESC_DISC_FULL100_80PCT " (\xe6\xbb\xa1" "100" "\xe6\x89\x93" "8" "\xe6\x8a\x98" ")"    //  (满100打8折)
 #define CN_DESC_DISC_FULL200_RED50 " (\xe6\xbb\xa1" "200" "\xe5\x87\x8f" "50" ")"                  //  (满200减50)
-#define CN_DESC_DISC_NONE          ""                                                              // (无折扣时不显示)
+#define CN_DESC_DISC_NONE          ""                                                              /* (无折扣时不显示) */
 
 // 交易记录界面
 #define CN_HISTORY     "\xe4\xba\xa4\xe6\x98\x93\xe8\xae\xb0\xe5\xbd\x95"  // 交易记录
@@ -97,7 +97,7 @@
 #define CN_PRICE_INVALID "\xe4\xbb\xb7\xe6\xa0\xbc\xe5\xbf\x85\xe9\xa1\xbb\xe5\xa4\xa7\xe4\xba\x8e" "0"  // 价格必须大于0
 // 密码验证
 #define CN_PASSWORD_TITLE       "\xe8\xaf\xb7\xe8\xbe\x93\xe5\x85\xa5\xe5\xaf\x86\xe7\xa0\x81"  // 请输入密码
-#define CN_PASSWORD_WRONG       "Wrong Password"
+#define CN_PASSWORD_WRONG       "\xe5\xaf\x86\xe7\xa0\x81\xe9\x94\x99\xe8\xaf\xaf!"            // 密码错误!
 #define CN_PASSWORD_PLACEHOLDER "\xe8\xbe\x93\xe5\x85\xa5\xe5\xaf\x86\xe7\xa0\x81\xe5\x90\x8e\xe6\x8c\x89\xe2\x9c\x93"  // 输入密码后按✓
 
 #endif

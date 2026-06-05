@@ -1,4 +1,4 @@
-#include "shop_app.h"
+﻿#include "shop_app.h"
 #include "shop_chinese.h"
 #include "ff.h"
 #include "drivers.h"
@@ -83,7 +83,7 @@ typedef struct {
     float quantity;
     float total_price;
     char item_text[128];
-    int error_type;  // 0=ok, 1=整数商品不能输小数, 2=数量不是正数
+    int error_type;  // 0=ok, 1=整数商品输入了小数, 2=数量不是正数
 } input_result_t;
 
 /* 解析用户输入 */
@@ -96,7 +96,7 @@ static input_result_t validate_and_parse_input(const char * input_str, const pro
         return result;
     }
 
-    // 整卖商品不能有小数点
+    // 整数商品不能有小数点
     if (is_integer_product(product) && strchr(input_str, '.') != NULL) {
         result.error_type = 1;
         return result;
@@ -217,7 +217,7 @@ void kb_event_cb(lv_event_t * e)
     }
 }
 
-/* ====== 结账相关 ====== */
+// 结账相关
 
 static transaction_t pending_tx;
 
@@ -257,7 +257,7 @@ void checkout_btn_event_cb(lv_event_t * e)
     float grand_total = 0.0f;
     uint32_t child_cnt = lv_obj_get_child_cnt(cart_list);
 
-    // 购物车是空的
+    // 购物车为空报错
     if (child_cnt <= 1) {
         shop_ui_show_msgbox(CN_HINT, CN_CART_EMPTY, NULL);
         led_blink_n(LED_RED, 70, 3);
@@ -365,7 +365,7 @@ void checkout_btn_event_cb(lv_event_t * e)
         }
     }
 
-    // 异步保存（用定时器延迟一下，避免卡UI）
+    // 异步保存（定时器延迟一下，避免卡UI）
     memcpy(&pending_tx, &tx, sizeof(transaction_t));
     lv_timer_t * tx_timer = lv_timer_create(async_tx_log_cb, 5, NULL);
     lv_timer_set_repeat_count(tx_timer, 1);
@@ -516,7 +516,7 @@ void history_btn_event_cb(lv_event_t * e)
     }
 }
 
-/* ====== 配置文件读写 ====== */
+// 配置文件读写
 
 /* 从 SD 卡加载优惠券数量 */
 void coupon_config_load(void)
@@ -623,7 +623,7 @@ void price_config_save(void)
     f_close(&file);
 }
 
-/* ====== 页面跳转回调 ====== */
+// 页面跳转回调
 
 void shop_btn_cb(lv_event_t * e)
 {

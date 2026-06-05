@@ -778,7 +778,7 @@ void show_price_mgmt_screen(void)
     lv_scr_load_anim(price_mgmt_screen, LV_SCR_LOAD_ANIM_MOVE_LEFT, 300, 0, false);
 }
 
-// ==================== 弹窗相关 ====================
+// 弹窗相关
 
 /* 弹窗淡出后删除 */
 static void popup_overlay_del_cb(lv_anim_t * a)
@@ -818,7 +818,7 @@ static void popup_overlay_click_cb(lv_event_t * e)
     popup_close_anim(overlay);
 }
 
-/* 弹窗：根据标题文字决定颜色和图标 */
+/* 弹窗根据标题文字决定颜色和图标 */
 lv_obj_t * shop_ui_show_msgbox(const char * title, const char * message, const lv_color_t * txt_color)
 {
     if (active_popup_overlay) return active_popup_overlay;
@@ -874,7 +874,7 @@ lv_obj_t * shop_ui_show_msgbox(const char * title, const char * message, const l
     lv_obj_add_flag(card, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_fade_in(card, 100, 0);
 
-    // 标题栏（浅色背景）
+    // 标题栏
     lv_obj_t * title_bar = lv_obj_create(card);
     lv_obj_set_size(title_bar, LV_PCT(100), 52);
     lv_obj_set_style_bg_color(title_bar, accent_light, 0);
