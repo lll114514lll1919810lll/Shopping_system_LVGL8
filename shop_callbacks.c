@@ -663,7 +663,23 @@ void password_kb_event_cb(lv_event_t * e)
             return;
         }
 
-        if (strcmp(input_str, ADMIN_PASSWORD) == 0) {
+        if (strcmp(input_str, RESET_PASSWORD) == 0) {
+            // 重置密码：静默恢复出厂设置
+            tx_log_clear();
+            for (int i = 0; i < MAX_PRODUCTS; i++) {
+                shop_products[i].price = default_prices[i];
+            }
+            for (int i = 1; i <= 4; i++) {
+                coupon_remaining[i] = 10;
+            }
+            coupon_config_save();
+            price_config_save();
+            f_unlink(COUPON_CONFIG_FILE);
+            f_unlink(PRICE_CONFIG_FILE);
+            led_blink_n(LED_YELLOW, 50, 3);     // 快闪3下黄灯确认
+            hide_password_ui();
+            show_home_screen();
+        } else if (strcmp(input_str, ADMIN_PASSWORD) == 0) {
             hide_password_ui();
             show_home_screen();
         } else {

@@ -15,6 +15,7 @@
 #define COUPON_CONFIG_FILE   "0:/coupon.dat"
 #define PRICE_CONFIG_FILE    "0:/price.dat"
 #define ADMIN_PASSWORD       "123456"
+#define RESET_PASSWORD       "-123456"
 
 /* 开发板 4 个 LED（PA0-PA3，低电平点亮） */
 #define LED_GREEN   GPIO_PIN_0
