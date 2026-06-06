@@ -12,7 +12,7 @@ int main()
     gpio_output_options_set(GPIOA, GPIO_OTYPE_PP, GPIO_OSPEED_60MHZ, LED_ALL);
     gpio_bit_set(GPIOA, LED_ALL);   // 默认全部熄灭（高电平）
     
-    /* 开机灯效 */
+    // 开机灯效
     led_blink(LED_GREEN,  150); delay_us(80000);
     led_blink(LED_BLUE,   150); delay_us(80000);
     led_blink(LED_YELLOW, 150); delay_us(80000);
