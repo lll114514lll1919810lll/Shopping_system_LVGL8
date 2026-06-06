@@ -107,7 +107,7 @@ void shop_ui_init(void);
 void show_home_screen(void);
 void show_shop_screen(void);
 
-/* 购物界面回调 */
+// 购物界面回调 
 void product_btn_event_cb(lv_event_t * e);
 void kb_event_cb(lv_event_t * e);
 void checkout_btn_event_cb(lv_event_t * e);
@@ -116,7 +116,7 @@ void label_event_cb(lv_event_t *e);
 void discount_cb_event_cb(lv_event_t * e);
 void cart_list_btn_event_cb(lv_event_t* e);
 
-/* 页面跳转回调 */
+// 页面跳转回调
 void shop_btn_cb(lv_event_t * e);
 void history_btn_home_cb(lv_event_t * e);
 void back_btn_cb(lv_event_t * e);
@@ -125,7 +125,7 @@ void password_kb_event_cb(lv_event_t * e);
 void coupon_mgmt_btn_home_cb(lv_event_t * e);
 void price_mgmt_btn_home_cb(lv_event_t * e);
 
-/* 优惠券管理 */
+// 优惠券管理
 void show_coupon_mgmt_screen(void);
 void shop_ui_close_coupon_mgmt_screen(void);
 void shop_ui_update_coupon_mgmt_display(void);
@@ -133,7 +133,7 @@ void shop_ui_update_coupon_display(void);
 void coupon_mgmt_plus_minus_cb(lv_event_t * e);
 void coupon_mgmt_reset_cb(lv_event_t * e);
 
-/* 价格管理 */
+// 价格管理
 void show_price_mgmt_screen(void);
 void shop_ui_close_price_mgmt_screen(void);
 void shop_ui_update_shop_prices(void);
@@ -144,7 +144,7 @@ void price_label_click_cb(lv_event_t * e);
 void price_kb_event_cb(lv_event_t * e);
 void price_overlay_click_cb(lv_event_t * e);
 
-/* 键盘输入 */
+// 键盘输入
 void show_input_ui(void);
 void hide_input_ui(void);
 void show_price_input_ui(int prod_idx);
@@ -152,7 +152,7 @@ void hide_price_input_ui(void);
 void show_password_ui(void);
 void hide_password_ui(void);
 
-/* 交易记录 */
+// 交易记录
 void tx_log_init(void);
 void tx_log_add(transaction_t * tx);
 void tx_log_clear(void);
@@ -168,13 +168,13 @@ void shop_ui_show_tx_detail(transaction_t * tx, uint8_t tx_index);
 void hist_clear_cb(lv_event_t * e);
 void hist_list_item_cb(lv_event_t * e);
 
-/* 配置持久化 */
+// 配置持久化
 void price_config_load(void);
 void price_config_save(void);
 void coupon_config_load(void);
 void coupon_config_save(void);
 
-/* UI 辅助 */
+// UI 辅助
 lv_obj_t * shop_ui_show_msgbox(const char * title, const char * message, const lv_color_t * txt_color);
 void shop_ui_add_cart_item(const char * item_text, const char * product_name);
 void shop_ui_show_checkout_result(const transaction_t * tx, float grand_total, float final_total, const char * discount_desc);
@@ -184,7 +184,7 @@ lv_obj_t * shop_ui_get_cart_edit_btn(void);
 void shop_ui_close_cart_menu(void);
 void shop_ui_update_cart_total(void);
 
-/* 底层接口 */
+// 底层接口
 extern void * sdram_malloc(uint32_t size);
 extern void read_file_to_array(const char *filename, void *array, uint32_t size);
 

@@ -59,6 +59,7 @@ lv_obj_t * password_input_ta = NULL;
 lv_obj_t * password_num_kb = NULL;
 lv_obj_t * password_overlay = NULL;
 
+// 显示主界面
 void show_home_screen(void)
 {
     if (home_screen) {
@@ -136,7 +137,7 @@ void show_home_screen(void)
 }
 
 
-/* 显示购物界面 */
+// 显示购物界面
 void show_shop_screen(void)
 {
     if (shop_screen) {
@@ -159,6 +160,7 @@ void show_shop_screen(void)
     lv_obj_set_flex_flow(product_panel, LV_FLEX_FLOW_ROW_WRAP);
     lv_obj_set_style_pad_gap(product_panel, 15, 0);
 
+    // 加载商品图片并创建商品展示项
     for(int i = 0; i < MAX_PRODUCTS; i++) {
         uint8_t * image_buffer = (uint8_t *)sdram_malloc(img_size_with_header);
         read_file_to_array(shop_products[i].img_path, image_buffer, img_size_with_header);
@@ -306,6 +308,7 @@ void show_shop_screen(void)
     lv_obj_set_style_text_align(discount_title, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_width(discount_title, lv_pct(100));
 
+    // 创建优惠券复选框
     for (int i = 0; i < 5; i++) {
         lv_obj_t * cb = lv_checkbox_create(discount_panel);
         discount_checkboxes[i] = cb;
@@ -337,7 +340,7 @@ void show_shop_screen(void)
     lv_scr_load_anim(shop_screen, LV_SCR_LOAD_ANIM_MOVE_LEFT, 300, 0, false);
 }
 
-/* 关闭购物界面 */
+// 关闭购物界面
 void shop_ui_close_shop_screen(void)
 {
     if(shop_screen) {
@@ -353,7 +356,7 @@ void shop_ui_close_shop_screen(void)
     }
 }
 
-/* 算购物车里商品总价 */
+// 计算购物车商品总价
 static float get_cart_total(void)
 {
     if(cart_list == NULL) return 0.0f;
@@ -374,7 +377,7 @@ static float get_cart_total(void)
     return total;
 }
 
-/* 刷新购物车底部总价 */
+// 刷新购物车底部总价
 void shop_ui_update_cart_total(void)
 {
     if(cart_total_label == NULL) return;
@@ -396,7 +399,7 @@ void shop_ui_update_cart_total(void)
     shop_ui_update_coupon_display();
 }
 
-/* 刷新优惠券复选框状态 */
+// 刷新优惠券复选框状态
 void shop_ui_update_coupon_display(void)
 {
     static const float disc_thresholds[5] = {0, 20.0f, 0, 100.0f, 200.0f};
@@ -441,7 +444,7 @@ void shop_ui_update_coupon_display(void)
     }
 }
 
-/* 更新优惠券管理页面数量显示 */
+// 更新优惠券管理页面数量显示
 void shop_ui_update_coupon_mgmt_display(void)
 {
     for (int i = 0; i < 4; i++) {
@@ -452,7 +455,7 @@ void shop_ui_update_coupon_mgmt_display(void)
     }
 }
 
-/* 关闭优惠券管理界面 */
+// 关闭优惠券管理界面
 void shop_ui_close_coupon_mgmt_screen(void)
 {
     if (coupon_mgmt_screen) {
@@ -463,7 +466,7 @@ void shop_ui_close_coupon_mgmt_screen(void)
     }
 }
 
-/* 显示优惠券管理界面 */
+// 显示优惠券管理界面
 void show_coupon_mgmt_screen(void)
 {
     if (coupon_mgmt_screen) {
@@ -492,6 +495,7 @@ void show_coupon_mgmt_screen(void)
     lv_label_set_text(back_lbl, CN_BTN_BACK);
     lv_obj_center(back_lbl);
 
+    // 创建优惠券管理行
     for (int i = 0; i < 4; i++) {
         int coupon_idx = i + 1;
         int y = 110 + i * 90;
@@ -548,7 +552,7 @@ void show_coupon_mgmt_screen(void)
     lv_scr_load_anim(coupon_mgmt_screen, LV_SCR_LOAD_ANIM_MOVE_LEFT, 300, 0, false);
 }
 
-/* 显示密码输入界面 */
+// 显示密码输入界面
 void show_password_ui(void)
 {
     if (password_input_ta == NULL || password_num_kb == NULL || password_overlay == NULL) return;
@@ -565,7 +569,7 @@ void show_password_ui(void)
     lv_obj_move_foreground(password_input_ta);
 }
 
-/* 隐藏密码输入界面 */
+// 隐藏密码输入界面
 void hide_password_ui(void)
 {
     if (password_input_ta != NULL) {
@@ -581,13 +585,13 @@ void hide_password_ui(void)
     }
 }
 
-/* 初始化UI */
+// 初始化UI
 void shop_ui_init(void)
 {
     show_home_screen();
 }
 
-/* 刷新价格管理页面的价格 */
+// 刷新价格管理页面的价格
 void shop_ui_update_price_mgmt_display(void)
 {
     for (int i = 0; i < MAX_PRODUCTS; i++) {
@@ -597,7 +601,7 @@ void shop_ui_update_price_mgmt_display(void)
     }
 }
 
-/* 刷新购物界面商品价格 */
+// 刷新购物界面商品价格
 void shop_ui_update_shop_prices(void)
 {
     for (int i = 0; i < MAX_PRODUCTS; i++) {
@@ -610,7 +614,7 @@ void shop_ui_update_shop_prices(void)
     }
 }
 
-/* 显示价格输入键盘 */
+// 显示价格输入键盘
 void show_price_input_ui(int prod_idx)
 {
     if (price_input_ta == NULL || price_num_kb == NULL || price_label_full == NULL) return;
@@ -636,7 +640,7 @@ void show_price_input_ui(int prod_idx)
     lv_obj_move_foreground(price_input_ta);
 }
 
-/* 隐藏价格输入键盘 */
+// 隐藏价格输入键盘
 void hide_price_input_ui(void)
 {
     if (price_input_ta != NULL) {
@@ -653,7 +657,7 @@ void hide_price_input_ui(void)
     price_edit_idx = -1;
 }
 
-/* 关闭价格管理界面 */
+// 关闭价格管理界面
 void shop_ui_close_price_mgmt_screen(void)
 {
     if (price_mgmt_screen) {
@@ -668,7 +672,7 @@ void shop_ui_close_price_mgmt_screen(void)
     }
 }
 
-/* 显示价格管理界面 */
+// 显示价格管理界面
 void show_price_mgmt_screen(void)
 {
     price_config_load();
@@ -699,6 +703,7 @@ void show_price_mgmt_screen(void)
     lv_label_set_text(back_lbl, CN_BTN_BACK);
     lv_obj_center(back_lbl);
 
+    // 创建价格管理行
     for (int i = 0; i < MAX_PRODUCTS; i++) {
         int y = 80 + i * 78;
 
@@ -780,16 +785,16 @@ void show_price_mgmt_screen(void)
 
 // 弹窗相关
 
-/* 弹窗淡出后删除 */
+// 弹窗淡出后删除
 static void popup_overlay_del_cb(lv_anim_t * a)
 {
     lv_obj_del((lv_obj_t *)a->var);
 }
 
-/* 防止同时弹出多个弹窗 */
+// 防止同时弹出多个弹窗
 static lv_obj_t * active_popup_overlay = NULL;
 
-/* 弹窗淡出关闭 */
+// 弹窗淡出关闭
 static void popup_close_anim(lv_obj_t * overlay)
 {
     if(overlay == NULL) return;
@@ -804,21 +809,21 @@ static void popup_close_anim(lv_obj_t * overlay)
     lv_anim_start(&a);
 }
 
-/* 弹窗关闭按钮回调 */
+// 弹窗关闭按钮回调
 static void popup_close_btn_cb(lv_event_t * e)
 {
     lv_obj_t * overlay = (lv_obj_t *)lv_event_get_user_data(e);
     if(overlay) popup_close_anim(overlay);
 }
 
-/* 点击遮罩关闭 */
+// 点击遮罩关闭
 static void popup_overlay_click_cb(lv_event_t * e)
 {
     lv_obj_t * overlay = lv_event_get_target(e);
     popup_close_anim(overlay);
 }
 
-/* 弹窗根据标题文字决定颜色和图标 */
+// 弹窗根据标题文字决定颜色和图标
 lv_obj_t * shop_ui_show_msgbox(const char * title, const char * message, const lv_color_t * txt_color)
 {
     if (active_popup_overlay) return active_popup_overlay;
@@ -970,7 +975,7 @@ lv_obj_t * shop_ui_show_msgbox(const char * title, const char * message, const l
     return overlay;
 }
 
-/* 在购物车中找指定商品 */
+// 在购物车中找指定商品
 static lv_obj_t * find_cart_item_by_name(const char * product_name)
 {
     if(cart_list == NULL || product_name == NULL) return NULL;
@@ -987,7 +992,7 @@ static lv_obj_t * find_cart_item_by_name(const char * product_name)
     return NULL;
 }
 
-/* 往购物车加商品，已有同名就替换 */
+// 往购物车加商品，已有同名就替换
 void shop_ui_add_cart_item(const char * item_text, const char * product_name)
 {
     if(cart_list == NULL || item_text == NULL || product_name == NULL) return;
@@ -1001,7 +1006,7 @@ void shop_ui_add_cart_item(const char * item_text, const char * product_name)
     lv_obj_add_event_cb(btn, cart_list_btn_event_cb, LV_EVENT_CLICKED, NULL);
 }
 
-/* 结算成功弹窗 */
+// 结算成功弹窗
 void shop_ui_show_checkout_result(const transaction_t * tx, float grand_total, float final_total, const char * discount_desc)
 {
     if (active_popup_overlay) return;
@@ -1125,6 +1130,7 @@ void shop_ui_show_checkout_result(const transaction_t * tx, float grand_total, f
 
     // 金额汇总
     if(grand_total != final_total) {
+
         // 折前
         snprintf(line_buf, sizeof(line_buf), CN_BEFORE_DISC ": %.2f " CN_YUAN, grand_total);
         lv_obj_t * before_lbl = lv_label_create(body);
@@ -1172,7 +1178,7 @@ void shop_ui_show_checkout_result(const transaction_t * tx, float grand_total, f
     lv_obj_set_style_text_color(ok_lbl, lv_color_white(), 0);
 }
 
-/* 购物车操作菜单上下文 */
+// 购物车操作菜单上下文
 static struct {
     lv_obj_t * overlay;
     lv_obj_t * delete_btn;
@@ -1182,7 +1188,7 @@ static struct {
 lv_obj_t * shop_ui_get_cart_delete_btn(void) { return cart_menu_ctx.delete_btn; }
 lv_obj_t * shop_ui_get_cart_edit_btn(void)  { return cart_menu_ctx.edit_btn; }
 
-/* 关闭购物车操作菜单 */
+// 关闭购物车操作菜单
 void shop_ui_close_cart_menu(void)
 {
     if(cart_menu_ctx.overlay) {
@@ -1193,7 +1199,7 @@ void shop_ui_close_cart_menu(void)
     }
 }
 
-/* 购物车操作菜单弹窗 */
+// 购物车操作菜单弹窗
 lv_obj_t * shop_ui_show_cart_action_menu(void)
 {
     if (active_popup_overlay) return active_popup_overlay;
@@ -1346,7 +1352,7 @@ lv_obj_t * shop_ui_show_cart_action_menu(void)
     return overlay;
 }
 
-/* 交易详情弹窗 */
+// 交易详情弹窗
 static lv_obj_t * hist_list  = NULL;
 
 static const char * get_discount_desc_str(tx_discount_type_t type)
@@ -1378,7 +1384,7 @@ static void close_detail_popup(lv_event_t * e)
     lv_anim_start(&a);
 }
 
-/* 删除记录按钮回调 */
+// 删除记录按钮回调
 static void detail_delete_btn_cb(lv_event_t * e)
 {
     lv_obj_t * overlay = (lv_obj_t *)lv_event_get_user_data(e);
@@ -1403,7 +1409,7 @@ static void detail_delete_btn_cb(lv_event_t * e)
     shop_ui_refresh_history_list();
 }
 
-/* 交易详情弹窗 */
+// 交易详情弹窗
 void shop_ui_show_tx_detail(transaction_t * tx, uint8_t tx_index)
 {
     if(tx == NULL) return;
@@ -1520,7 +1526,7 @@ void shop_ui_show_tx_detail(transaction_t * tx, uint8_t tx_index)
     lv_obj_fade_in(overlay, 150, 0);
 }
 
-/* 刷新历史记录列表 */
+// 刷新历史记录列表
 void shop_ui_refresh_history_list(void)
 {
     if(hist_list == NULL) return;
@@ -1576,7 +1582,7 @@ void shop_ui_refresh_history_list(void)
     }
 }
 
-/* 关闭历史面板 */
+// 关闭历史面板
 void shop_ui_close_history_panel(void)
 {
     if(history_screen) {
@@ -1585,7 +1591,7 @@ void shop_ui_close_history_panel(void)
     }
 }
 
-/* 显示交易历史页面 */
+// 显示交易历史页面
 void show_history_panel(void)
 {
     if(history_screen) {

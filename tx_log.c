@@ -9,7 +9,7 @@
 // 全局交易记录
 transaction_log_t tx_log;
 
-/* 初始化 */
+// 初始化
 void tx_log_init(void)
 {
     tx_log.count   = 0;
@@ -17,7 +17,7 @@ void tx_log_init(void)
     tx_log_load_from_sd();
 }
 
-/* 添加一条交易记录 */
+// 添加一条交易记录
 void tx_log_add(transaction_t * tx)
 {
     if(tx == NULL) return;
@@ -36,7 +36,7 @@ void tx_log_add(transaction_t * tx)
     tx_log_save_to_sd();
 }
 
-/* 清空全部记录 */
+// 清空全部记录
 void tx_log_clear(void)
 {
     tx_log.count   = 0;
@@ -44,7 +44,7 @@ void tx_log_clear(void)
     f_unlink(TX_LOG_FILE);
 }
 
-/* 删除指定索引的记录 */
+// 删除指定索引的记录
 void tx_log_delete(uint8_t index)
 {
     if(index >= tx_log.count) return;
@@ -63,7 +63,7 @@ void tx_log_delete(uint8_t index)
     tx_log_save_to_sd();
 }
 
-/* 保存到 SD 卡，CSV 格式 */
+// 保存到 SD 卡，CSV 格式
 int tx_log_save_to_sd(void)
 {
     FIL file;
@@ -124,7 +124,7 @@ int tx_log_save_to_sd(void)
     return 0;
 }
 
-/* 从 SD 卡加载记录 */
+// 从 SD 卡加载记录
 int tx_log_load_from_sd(void)
 {
     FIL file;

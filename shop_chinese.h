@@ -1,7 +1,7 @@
 #ifndef _SHOP_CHINESE_H
 #define _SHOP_CHINESE_H
 
-/* UTF-8 预编码中文字符串 */
+// UTF-8 预编码中文字符串
 
 // 商品名称
 #define CN_APPLE      "\xe8\x8b\xb9\xe6\x9e\x9c"            // 苹果

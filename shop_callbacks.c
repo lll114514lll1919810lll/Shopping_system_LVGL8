@@ -3,7 +3,7 @@
 #include "ff.h"
 #include "drivers.h"
 
-/* 优惠类型 */
+// 优惠类型 
 typedef enum {
     DISCOUNT_NONE = 0,
     DISCOUNT_FULL_REDUCTION,
@@ -23,7 +23,7 @@ extern lv_obj_t * input_ta;
 extern lv_obj_t * num_kb;
 extern lv_obj_t * label_full;
 
-/* 定时器：清空购物车 */
+// 定时器：清空购物车
 static void clear_cart_timer_cb(lv_timer_t * timer)
 {
     if(cart_list != NULL) {
@@ -35,7 +35,7 @@ static void clear_cart_timer_cb(lv_timer_t * timer)
     shop_ui_update_cart_total();
 }
 
-/* 商品点击事件 */
+// 商品点击事件
 void product_btn_event_cb(lv_event_t * e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -54,7 +54,7 @@ void product_btn_event_cb(lv_event_t * e)
     }
 }
 
-/* 显示输入面板 */
+// 显示输入面板
 void show_input_ui(void)
 {
     lv_keyboard_set_textarea(num_kb, input_ta);
@@ -66,7 +66,7 @@ void show_input_ui(void)
     lv_obj_move_foreground(input_ta);
 }
 
-/* 判断商品是否必须整数个 */
+// 判断商品是否必须整数个
 static int is_integer_product(const product_t * product)
 {
     if(product == NULL) return 0;
@@ -77,7 +77,7 @@ static int is_integer_product(const product_t * product)
     return 0;
 }
 
-/* 输入的验证结果 */
+// 输入的验证结果
 typedef struct {
     int is_valid;
     float quantity;
@@ -86,7 +86,7 @@ typedef struct {
     int error_type;  // 0=ok, 1=整数商品输入了小数, 2=数量不是正数
 } input_result_t;
 
-/* 解析用户输入 */
+// 解析用户输入
 static input_result_t validate_and_parse_input(const char * input_str, const product_t * product)
 {
     input_result_t result;
@@ -119,7 +119,7 @@ static input_result_t validate_and_parse_input(const char * input_str, const pro
     return result;
 }
 
-/* 隐藏输入面板 */
+// 隐藏输入面板
 void hide_input_ui(void)
 {
     if(input_ta != NULL) {
@@ -136,7 +136,7 @@ void hide_input_ui(void)
     current_kb_mode = KB_MODE_NONE;
 }
 
-/* 键盘确定键加入购物车 */
+// 键盘确定键加入购物车
 static void kb_mode_add_to_cart_handler(const char * input_str)
 {
     if(current_product == NULL || cart_list == NULL) {
@@ -163,7 +163,7 @@ static void kb_mode_add_to_cart_handler(const char * input_str)
     led_blink(LED_YELLOW, 70);
 }
 
-/* 键盘确定键修改数量 */
+// 键盘确定键修改数量
 static void kb_mode_edit_quantity_handler(const char * input_str)
 {
     if(current_product == NULL || cart_list == NULL) {
@@ -190,7 +190,7 @@ static void kb_mode_edit_quantity_handler(const char * input_str)
     hide_input_ui();
 }
 
-/* 数字键盘事件 */
+// 数字键盘事件
 void kb_event_cb(lv_event_t * e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -226,7 +226,7 @@ static void async_tx_log_cb(lv_timer_t * timer) {
     lv_timer_del(timer);
 }
 
-/* LED灯效任务 */
+// LED灯效任务
 typedef struct {
     uint32_t pin;
     uint16_t ms;
@@ -248,7 +248,7 @@ static void async_led_cb(lv_timer_t * timer)
     lv_timer_del(timer);
 }
 
-/* 结账按钮 */
+// 结账按钮
 void checkout_btn_event_cb(lv_event_t * e)
 {
     if(lv_event_get_code(e) != LV_EVENT_CLICKED) return;
@@ -386,7 +386,7 @@ void checkout_btn_event_cb(lv_event_t * e)
     lv_timer_set_repeat_count(t, 1);
 }
 
-/* 清空购物车 */
+// 清空购物车
 void clear_btn_event_cb(lv_event_t * e)
 {
     if(lv_event_get_code(e) == LV_EVENT_CLICKED && cart_list != NULL) {
@@ -399,7 +399,7 @@ void clear_btn_event_cb(lv_event_t * e)
     shop_ui_update_cart_total();
 }
 
-/* 遮罩点击 */
+// 遮罩点击
 void label_event_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -409,7 +409,7 @@ void label_event_cb(lv_event_t *e)
     }
 }
 
-/* 折扣复选框 */
+// 折扣复选框
 void discount_cb_event_cb(lv_event_t * e) {
     lv_obj_t * cb = lv_event_get_target(e);
     uint32_t idx = (uint32_t)lv_event_get_user_data(e);
@@ -443,7 +443,7 @@ void discount_cb_event_cb(lv_event_t * e) {
 static void cart_action_delete_cb(lv_event_t * e);
 static void cart_action_edit_cb(lv_event_t * e);
 
-/* 购物车条目点击 */
+// 购物车条目点击
 void cart_list_btn_event_cb(lv_event_t* e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -467,7 +467,7 @@ void cart_list_btn_event_cb(lv_event_t* e)
     }
 }
 
-/* 删除按钮回调 */
+// 删除按钮回调
 static void cart_action_delete_cb(lv_event_t * e)
 {
     if(lv_event_get_code(e) != LV_EVENT_CLICKED) return;
@@ -479,7 +479,7 @@ static void cart_action_delete_cb(lv_event_t * e)
     shop_ui_close_cart_menu();
 }
 
-/* 修改数量按钮回调 */
+// 修改数量按钮回调
 static void cart_action_edit_cb(lv_event_t * e)
 {
     if(lv_event_get_code(e) != LV_EVENT_CLICKED) return;
@@ -508,7 +508,7 @@ static void cart_action_edit_cb(lv_event_t * e)
     shop_ui_close_cart_menu();
 }
 
-/* 交易记录按钮回调 */
+// 交易记录按钮回调
 void history_btn_event_cb(lv_event_t * e)
 {
     if(lv_event_get_code(e) == LV_EVENT_CLICKED) {
@@ -518,7 +518,7 @@ void history_btn_event_cb(lv_event_t * e)
 
 // 配置文件读写
 
-/* 从 SD 卡加载优惠券数量 */
+// 从 SD 卡加载优惠券数量
 void coupon_config_load(void)
 {
     FIL file;
@@ -549,7 +549,7 @@ void coupon_config_load(void)
     }
 }
 
-/* 保存优惠券数量到 SD 卡 */
+// 保存优惠券数量到 SD 卡
 void coupon_config_save(void)
 {
     FIL file;
@@ -569,7 +569,7 @@ void coupon_config_save(void)
     f_close(&file);
 }
 
-/* 从 SD 卡加载商品价格 */
+// 从 SD 卡加载商品价格
 void price_config_load(void)
 {
     FIL file;
@@ -603,7 +603,7 @@ void price_config_load(void)
     }
 }
 
-/* 保存商品价格到 SD 卡 */
+// 保存商品价格到 SD 卡
 void price_config_save(void)
 {
     FIL file;
@@ -649,7 +649,7 @@ void shop_back_btn_cb(lv_event_t * e)
     show_password_ui();
 }
 
-/* 密码键盘 */
+// 密码键盘
 void password_kb_event_cb(lv_event_t * e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -693,13 +693,14 @@ void password_kb_event_cb(lv_event_t * e)
     }
 }
 
+// 优惠券管理按钮回调
 void coupon_mgmt_btn_home_cb(lv_event_t * e)
 {
     (void)e;
     show_coupon_mgmt_screen();
 }
 
-/* 优惠券管理 +/- 按钮 */
+// 优惠券管理 +/- 按钮
 void coupon_mgmt_plus_minus_cb(lv_event_t * e)
 {
     if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
@@ -728,7 +729,7 @@ void coupon_mgmt_plus_minus_cb(lv_event_t * e)
     coupon_config_save();
 }
 
-/* 优惠券重置 */
+// 优惠券重置
 void coupon_mgmt_reset_cb(lv_event_t * e)
 {
     if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
@@ -748,7 +749,7 @@ void price_mgmt_btn_home_cb(lv_event_t * e)
     show_price_mgmt_screen();
 }
 
-/* 价格管理 +/- 按钮 */
+// 价格管理 +/- 按钮
 void price_mgmt_plus_minus_cb(lv_event_t * e)
 {
     if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
@@ -777,7 +778,7 @@ void price_mgmt_plus_minus_cb(lv_event_t * e)
     price_config_save();
 }
 
-/* 价格重置为默认 */
+// 价格重置为默认
 void price_mgmt_reset_cb(lv_event_t * e)
 {
     if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
@@ -791,7 +792,7 @@ void price_mgmt_reset_cb(lv_event_t * e)
     price_config_save();
 }
 
-/* 价格标签点击 */
+// 价格标签点击
 void price_label_click_cb(lv_event_t * e)
 {
     if (lv_event_get_code(e) != LV_EVENT_CLICKED) return;
@@ -800,7 +801,7 @@ void price_label_click_cb(lv_event_t * e)
     show_price_input_ui(prod_idx);
 }
 
-/* 价格键盘 */
+// 价格键盘
 void price_kb_event_cb(lv_event_t * e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -842,7 +843,7 @@ void price_overlay_click_cb(lv_event_t * e)
     hide_price_input_ui();
 }
 
-/* 清空交易记录 */
+// 清空交易记录
 void hist_clear_cb(lv_event_t * e)
 {
     (void)e;
@@ -850,7 +851,7 @@ void hist_clear_cb(lv_event_t * e)
     shop_ui_refresh_history_list();
 }
 
-/* 历史记录条目点击 */
+// 历史记录条目点击
 void hist_list_item_cb(lv_event_t * e)
 {
     int idx = (int)(uintptr_t)lv_event_get_user_data(e);
