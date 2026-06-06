@@ -136,7 +136,7 @@ void hide_input_ui(void)
     current_kb_mode = KB_MODE_NONE;
 }
 
-/* 键盘确定：加入购物车 */
+/* 键盘确定键加入购物车 */
 static void kb_mode_add_to_cart_handler(const char * input_str)
 {
     if(current_product == NULL || cart_list == NULL) {
@@ -163,7 +163,7 @@ static void kb_mode_add_to_cart_handler(const char * input_str)
     led_blink(LED_YELLOW, 70);
 }
 
-/* 键盘确定：修改数量 */
+/* 键盘确定键修改数量 */
 static void kb_mode_edit_quantity_handler(const char * input_str)
 {
     if(current_product == NULL || cart_list == NULL) {

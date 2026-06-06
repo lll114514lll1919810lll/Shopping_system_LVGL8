@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* ---- 常量和硬件 ---- */
+// 常量和硬件
 #define MAX_PRODUCTS         6
 #define MAX_CART_ITEMS       10
 #define MAX_TX_HISTORY       30
@@ -17,7 +17,7 @@
 #define ADMIN_PASSWORD       "123456"
 #define RESET_PASSWORD       "-123456"
 
-/* 开发板 4 个 LED（PA0-PA3，低电平点亮） */
+// 开发板 4 个 LED（PA0-PA3，低电平点亮）
 #define LED_GREEN   GPIO_PIN_0
 #define LED_BLUE    GPIO_PIN_1
 #define LED_YELLOW  GPIO_PIN_2
@@ -30,7 +30,7 @@
 #define led_blink(pin, ms)    do { led_on(pin); delay_us((ms)*1000); led_off(pin); } while(0)
 #define led_blink_n(pin, ms, n) do { for(int _i_=0; _i_<(n); _i_++) { led_on(pin); delay_us((ms)*1000); led_off(pin); if(_i_<(n)-1) delay_us((ms)*500); } } while(0)
 
-/* ---- 数据结构 ---- */
+// 数据结构
 
 typedef struct {
     uint8_t id;
@@ -75,7 +75,7 @@ typedef enum {
     KB_MODE_EDIT_QUANTITY,
 } kb_input_mode_t;
 
-/* ---- 全局变量 ---- */
+// 全局变量
 
 extern product_t shop_products[MAX_PRODUCTS];
 extern transaction_log_t tx_log;
@@ -101,7 +101,7 @@ extern lv_obj_t * password_input_ta;
 extern lv_obj_t * password_num_kb;
 extern lv_obj_t * password_overlay;
 
-/* ---- 函数声明 ---- */
+// 函数声明
 
 void shop_ui_init(void);
 void show_home_screen(void);
