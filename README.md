@@ -1,4 +1,4 @@
-# Shopping_system_LVGL8
+# Shopping_system_LVGL8（已停止维护）
 
 **一个基于 GD32H7XX + LVGL8 的嵌入式购物系统课程项目。**
 
