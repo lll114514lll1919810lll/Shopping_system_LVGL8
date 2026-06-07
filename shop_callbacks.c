@@ -858,3 +858,17 @@ void hist_list_item_cb(lv_event_t * e)
     if(idx < 0 || idx >= (int)tx_log.count) return;
     shop_ui_show_tx_detail(&tx_log.records[idx], (uint8_t)idx);
 }
+
+// 统计按钮回调
+void detail_statistics_btn_cb(lv_event_t * e)
+{
+    (void)e;
+    show_statistics_screen();
+}
+
+// 统计页面返回按钮
+void statistics_back_btn_cb(lv_event_t * e)
+{
+    (void)e;
+    show_history_panel_back();
+}

@@ -160,11 +160,15 @@ void tx_log_delete(uint8_t index);
 int tx_log_save_to_sd(void);
 int tx_log_load_from_sd(void);
 void show_history_panel(void);
+void show_history_panel_back(void);
 void history_btn_event_cb(lv_event_t * e);
 void shop_ui_close_shop_screen(void);
 void shop_ui_close_history_panel(void);
 void shop_ui_refresh_history_list(void);
 void shop_ui_show_tx_detail(transaction_t * tx, uint8_t tx_index);
+void detail_statistics_btn_cb(lv_event_t * e);
+void statistics_back_btn_cb(lv_event_t * e);
+void show_statistics_screen(void);
 void hist_clear_cb(lv_event_t * e);
 void hist_list_item_cb(lv_event_t * e);
 
